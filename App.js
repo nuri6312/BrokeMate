@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { onAuthStateChange } from './services/authService';
 import LoginScreen from './components/auth/LoginScreen';
 import SignUpScreen from './components/auth/SignUpScreen';
-import HomeScreen from './screens/HomeScreen';
+import MainTabNavigator from './navigation/MainTabNavigator';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -18,13 +18,13 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // If user is authenticated, show home screen
+  // If user is authenticated, show main tab navigator
   if (user) {
     return (
-      <View style={styles.container}>
-        <HomeScreen user={user} />
+      <>
+        <MainTabNavigator user={user} />
         <StatusBar style="auto" />
-      </View>
+      </>
     );
   }
 

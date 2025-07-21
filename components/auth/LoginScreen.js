@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, StatusBar, Platform } from 'react-native';
 import { signIn } from '../../services/authService';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 export default function LoginScreen({ onSwitchToSignUp }) {
   const [email, setEmail] = useState('');
@@ -27,44 +28,78 @@ export default function LoginScreen({ onSwitchToSignUp }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>BrokeMate</Text>
-      <Text style={styles.subtitle}>Sign In</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+      {/* App Icon */}
+      <View style={styles.iconContainer}>
+        <View style={styles.icon}>
+          <Text style={styles.iconText}>$</Text>
+        </View>
+      </View>
       
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      {/* Welcome Text */}
+      <Text style={styles.welcomeTitle}>Welcome Back</Text>
+      <Text style={styles.subtitle}>Sign in to your BrokeMate account</Text>
       
+      {/* Email Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Email Address or Phone Number</Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputIcon}>✉</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email or phone"
+            placeholderTextColor="#9ca3af"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+      </View>
+      
+      {/* Password Input */}
+      <View style={styles.inputContainer}>
+        <View style={styles.passwordHeader}>
+          <Text style={styles.inputLabel}>Password</Text>
+          <TouchableOpacity>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputIcon}>🔒</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your password"
+            placeholderTextColor="#9ca3af"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <TouchableOpacity style={styles.eyeIcon}>
+            <Text style={styles.eyeIconText}>👁</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      {/* Sign In Button */}
       <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
+        style={[styles.signInButton, loading && styles.buttonDisabled]} 
         onPress={handleSignIn}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>
+        <Text style={styles.signInButtonText}>
           {loading ? 'Signing In...' : 'Sign In'}
         </Text>
       </TouchableOpacity>
       
-      <TouchableOpacity 
-        style={styles.linkButton} 
-        onPress={onSwitchToSignUp}
-      >
-        <Text style={styles.linkText}>
-          Need an account? Sign Up
-        </Text>
-      </TouchableOpacity>
+      {/* Sign Up Link */}
+      <View style={styles.signUpContainer}>
+        <Text style={styles.signUpText}>Don't have an account? </Text>
+        <TouchableOpacity onPress={onSwitchToSignUp}>
+          <Text style={styles.signUpLink}>Sign Up</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -72,56 +107,155 @@ export default function LoginScreen({ onSwitchToSignUp }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: wp('6%'),
+    paddingVertical: Platform.OS === 'ios' ? hp('7.5%') : hp('5%'),
+    paddingTop: Platform.OS === 'ios' ? hp('10%') : StatusBar.currentHeight + hp('5%'),
   },
-  title: {
-    fontSize: 32,
+  iconContainer: {
+    marginBottom: 32,
+  },
+  icon: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#10b981',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  iconText: {
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    color: '#ffffff',
+  },
+  welcomeTitle: {
+    fontSize: Platform.OS === 'ios' ? wp('8.5%') : wp('8%'),
+    fontWeight: Platform.OS === 'ios' ? '700' : '600',
+    color: '#1f2937',
+    marginBottom: hp('1%'),
+    textAlign: 'center',
+    letterSpacing: Platform.OS === 'ios' ? -0.5 : 0,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 30,
+    fontSize: Platform.OS === 'ios' ? wp('4.3%') : wp('4%'),
+    color: '#6b7280',
+    marginBottom: hp('5%'),
+    textAlign: 'center',
+    lineHeight: Platform.OS === 'ios' ? hp('2.8%') : hp('2.5%'),
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  passwordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  forgotPassword: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '500',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
+    borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: wp('4%'),
+    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  inputIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    color: '#9ca3af',
   },
   input: {
-    width: '100%',
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    marginBottom: 15,
+    flex: 1,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    color: '#1f2937',
+    paddingVertical: 0,
   },
-  button: {
+  eyeIcon: {
+    padding: 4,
+  },
+  eyeIconText: {
+    fontSize: 18,
+    color: '#9ca3af',
+  },
+  signInButton: {
     width: '100%',
-    height: 50,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
+    backgroundColor: '#10b981',
+    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 15,
+    marginTop: hp('1%'),
+    marginBottom: hp('4%'),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#9ca3af',
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  buttonText: {
-    color: '#fff',
+  signInButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  signUpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signUpText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#6b7280',
   },
-  linkButton: {
-    marginTop: 10,
-  },
-  linkText: {
-    color: '#007AFF',
-    fontSize: 14,
-    textAlign: 'center',
+  signUpLink: {
+    fontSize: 16,
+    color: '#10b981',
+    fontWeight: '600',
   },
 });

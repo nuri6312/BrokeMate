@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, StatusBar, Platform } from 'react-native';
 import { signUp } from '../../services/authService';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 export default function SignUpScreen({ onSwitchToLogin }) {
   const [email, setEmail] = useState('');
@@ -41,60 +42,108 @@ export default function SignUpScreen({ onSwitchToLogin }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>BrokeMate</Text>
-      <Text style={styles.subtitle}>Create Account</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       
-      <TextInput
-        style={styles.input}
-        placeholder="Display Name"
-        value={displayName}
-        onChangeText={setDisplayName}
-        autoCapitalize="words"
-      />
+      {/* App Icon */}
+      <View style={styles.iconContainer}>
+        <View style={styles.icon}>
+          <Text style={styles.iconText}>$</Text>
+        </View>
+      </View>
       
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+      {/* Welcome Text */}
+      <Text style={styles.welcomeTitle}>Create Account</Text>
+      <Text style={styles.subtitle}>Join BrokeMate and start managing expenses</Text>
       
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      {/* Display Name Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Full Name</Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputIcon}>👤</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your full name"
+            placeholderTextColor="#9ca3af"
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCapitalize="words"
+          />
+        </View>
+      </View>
       
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-      />
+      {/* Email Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Email Address</Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputIcon}>✉</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email address"
+            placeholderTextColor="#9ca3af"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+      </View>
       
+      {/* Password Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Password</Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputIcon}>🔒</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Create a password"
+            placeholderTextColor="#9ca3af"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <TouchableOpacity style={styles.eyeIcon}>
+            <Text style={styles.eyeIconText}>👁</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      {/* Confirm Password Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.inputLabel}>Confirm Password</Text>
+        <View style={styles.inputWrapper}>
+          <Text style={styles.inputIcon}>🔒</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm your password"
+            placeholderTextColor="#9ca3af"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+          <TouchableOpacity style={styles.eyeIcon}>
+            <Text style={styles.eyeIconText}>👁</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      {/* Sign Up Button */}
       <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
+        style={[styles.signUpButton, loading && styles.buttonDisabled]} 
         onPress={handleSignUp}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>
+        <Text style={styles.signUpButtonText}>
           {loading ? 'Creating Account...' : 'Sign Up'}
         </Text>
       </TouchableOpacity>
       
-      <TouchableOpacity 
-        style={styles.linkButton} 
-        onPress={onSwitchToLogin}
-      >
-        <Text style={styles.linkText}>
-          Already have an account? Sign In
-        </Text>
-      </TouchableOpacity>
+      {/* Sign In Link */}
+      <View style={styles.signInContainer}>
+        <Text style={styles.signInText}>Already have an account? </Text>
+        <TouchableOpacity onPress={onSwitchToLogin}>
+          <Text style={styles.signInLink}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -102,56 +151,144 @@ export default function SignUpScreen({ onSwitchToLogin }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: wp('6%'),
+    paddingVertical: Platform.OS === 'ios' ? hp('7.5%') : hp('5%'),
+    paddingTop: Platform.OS === 'ios' ? hp('10%') : StatusBar.currentHeight + hp('5%'),
   },
-  title: {
-    fontSize: 32,
+  iconContainer: {
+    marginBottom: 32,
+  },
+  icon: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#10b981',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  iconText: {
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+    color: '#ffffff',
+  },
+  welcomeTitle: {
+    fontSize: Platform.OS === 'ios' ? wp('8.5%') : wp('8%'),
+    fontWeight: Platform.OS === 'ios' ? '700' : '600',
+    color: '#1f2937',
+    marginBottom: hp('1%'),
+    textAlign: 'center',
+    letterSpacing: Platform.OS === 'ios' ? -0.5 : 0,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 30,
+    fontSize: Platform.OS === 'ios' ? wp('4.3%') : wp('4%'),
+    color: '#6b7280',
+    marginBottom: hp('4%'),
+    textAlign: 'center',
+    lineHeight: Platform.OS === 'ios' ? hp('2.8%') : hp('2.5%'),
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
+    borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: wp('4%'),
+    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  inputIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    color: '#9ca3af',
   },
   input: {
-    width: '100%',
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    marginBottom: 15,
+    flex: 1,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    color: '#1f2937',
+    paddingVertical: 0,
   },
-  button: {
+  eyeIcon: {
+    padding: 4,
+  },
+  eyeIconText: {
+    fontSize: 18,
+    color: '#9ca3af',
+  },
+  signUpButton: {
     width: '100%',
-    height: 50,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
+    backgroundColor: '#10b981',
+    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 15,
+    marginTop: hp('1%'),
+    marginBottom: hp('4%'),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#9ca3af',
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  buttonText: {
-    color: '#fff',
+  signUpButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  signInContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#6b7280',
   },
-  linkButton: {
-    marginTop: 10,
-  },
-  linkText: {
-    color: '#007AFF',
-    fontSize: 14,
-    textAlign: 'center',
+  signInLink: {
+    fontSize: 16,
+    color: '#10b981',
+    fontWeight: '600',
   },
 });
