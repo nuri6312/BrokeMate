@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
-export default function DashboardScreen({ user }) {
+export default function DashboardScreen({ user, navigation }) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -41,7 +41,10 @@ export default function DashboardScreen({ user }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming Payments</Text>
           
-          <View style={styles.paymentItem}>
+          <TouchableOpacity 
+            style={styles.paymentItem}
+            onPress={() => navigation.navigate('ExpenseDetails')}
+          >
             <View style={styles.paymentIcon}>
               <Ionicons name="home-outline" size={wp('5%')} color="#6b7280" />
             </View>
@@ -50,9 +53,12 @@ export default function DashboardScreen({ user }) {
               <Text style={styles.paymentAmount}>$25</Text>
             </View>
             <Text style={styles.paymentDue}>Due in 3 days</Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.paymentItem}>
+          <TouchableOpacity 
+            style={styles.paymentItem}
+            onPress={() => navigation.navigate('ExpenseDetails')}
+          >
             <View style={styles.paymentIcon}>
               <Ionicons name="flash-outline" size={wp('5%')} color="#6b7280" />
             </View>
@@ -61,14 +67,17 @@ export default function DashboardScreen({ user }) {
               <Text style={styles.paymentAmount}>$15</Text>
             </View>
             <Text style={styles.paymentDue}>Due in 7 days</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Group Balances Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Group Balances</Text>
           
-          <View style={styles.groupItem}>
+          <TouchableOpacity 
+            style={styles.groupItem}
+            onPress={() => navigation.navigate('ExpenseDetails')}
+          >
             <View style={styles.groupIcon}>
               <Ionicons name="people-outline" size={wp('5%')} color="#6b7280" />
             </View>
@@ -77,9 +86,12 @@ export default function DashboardScreen({ user }) {
               <Text style={styles.groupAmount}>$10</Text>
             </View>
             <Text style={styles.groupStatus}>You owe</Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.groupItem}>
+          <TouchableOpacity 
+            style={styles.groupItem}
+            onPress={() => navigation.navigate('ExpenseDetails')}
+          >
             <View style={styles.groupIcon}>
               <Ionicons name="people-outline" size={wp('5%')} color="#6b7280" />
             </View>
@@ -88,7 +100,7 @@ export default function DashboardScreen({ user }) {
               <Text style={styles.groupAmount}>$20</Text>
             </View>
             <Text style={styles.groupStatusOwed}>You're owed</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Add some bottom padding for the floating button */}
@@ -96,7 +108,10 @@ export default function DashboardScreen({ user }) {
       </ScrollView>
 
       {/* Floating Add Expense Button */}
-      <TouchableOpacity style={styles.floatingButton}>
+      <TouchableOpacity 
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('AddExpense')}
+      >
         <Ionicons name="add" size={wp('6%')} color="#ffffff" style={styles.floatingButtonIcon} />
         <Text style={styles.floatingButtonText}>Add Expense</Text>
       </TouchableOpacity>
