@@ -1,106 +1,144 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, StatusBar, Platform } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  StatusBar,
+} from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+// Note: Assuming these services and libraries are available in your project setup.
 import { signIn } from '../../services/authService';
-import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import {
+  widthPercentageToDP as wp,
+  heightPercentageToDP as hp,
+} from 'react-native-responsive-screen';
 
 export default function LoginScreen({ onSwitchToSignUp }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // useSafeAreaInsets is a hook from 'react-native-safe-area-context'
+  // that provides information about the safe area of the device.
+  const insets = useSafeAreaInsets();
 
+  // Function to handle the sign-in button press.
   const handleSignIn = async () => {
+    // Basic form validation.
     if (!email || !password) {
+      // We use Alert for a simple pop-up message.
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    setLoading(true);
+    setLoading(true); // Show a loading state on the button.
+    // Call the external signIn service.
     const result = await signIn(email, password);
-    setLoading(false);
+    setLoading(false); // Hide the loading state.
 
+    // Check the result of the sign-in attempt.
     if (result.success) {
+      // Clear the input fields on successful sign-in.
       setEmail('');
       setPassword('');
+      // In a real app, you would navigate to the home screen here.
     } else {
+      // Display an error message if sign-in fails.
       Alert.alert('Error', result.error);
     }
   };
 
   return (
-    <View style={styles.container}>
+    // SafeAreaView ensures content is not obscured by device notches, etc.
+    <SafeAreaView style={styles.container}>
+      {/* StatusBar component to control the status bar's appearance. */}
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
-      {/* App Icon */}
-      <View style={styles.iconContainer}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>$</Text>
+
+      {/* Main content container with dynamic padding for the top safe area. */}
+      <View style={[styles.content, { paddingTop: insets.top + hp('2%') }]}>
+        {/* App Icon Section */}
+        <View style={styles.iconContainer}>
+          <View style={styles.icon}>
+            {/* Professional wallet/finance icon */}
+            <MaterialIcons name="account-balance-wallet" size={wp('9%')} color="#ffffff" />
+          </View>
         </View>
-      </View>
-      
-      {/* Welcome Text */}
-      <Text style={styles.welcomeTitle}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Sign in to your BrokeMate account</Text>
-      
-      {/* Email Input */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Email Address or Phone Number</Text>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>✉</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email or phone"
-            placeholderTextColor="#9ca3af"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+
+        {/* Welcome Text */}
+        <Text style={styles.welcomeTitle}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to your BrokeMate account</Text>
+
+        {/* Email Input Field */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Email Address </Text>
+          <View style={styles.inputWrapper}>
+            {/* Professional email icon */}
+            <Ionicons name="mail-outline" size={wp('5%')} color="#9ca3af" style={styles.inputIconStyle} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email "
+              placeholderTextColor="#9ca3af"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
         </View>
-      </View>
-      
-      {/* Password Input */}
-      <View style={styles.inputContainer}>
-        <View style={styles.passwordHeader}>
-          <Text style={styles.inputLabel}>Password</Text>
-          <TouchableOpacity>
-            <Text style={styles.forgotPassword}>Forgot Password?</Text>
-          </TouchableOpacity>
+
+        {/* Password Input Field */}
+        <View style={styles.inputContainer}>
+          <View style={styles.passwordHeader}>
+            <Text style={styles.inputLabel}>Password</Text>
+            {/* "Forgot Password" link as a TouchableOpacity. */}
+            <TouchableOpacity>
+              <Text style={styles.forgotPassword}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.inputWrapper}>
+            {/* Professional lock icon */}
+            <Ionicons name="lock-closed-outline" size={wp('5%')} color="#9ca3af" style={styles.inputIconStyle} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#9ca3af"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            {/* Professional eye icon for show/hide password */}
+            <TouchableOpacity style={styles.eyeIcon}>
+              <Ionicons name="eye-outline" size={wp('4.5%')} color="#9ca3af" />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>🔒</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor="#9ca3af"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TouchableOpacity style={styles.eyeIcon}>
-            <Text style={styles.eyeIconText}>👁</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      {/* Sign In Button */}
-      <TouchableOpacity 
-        style={[styles.signInButton, loading && styles.buttonDisabled]} 
-        onPress={handleSignIn}
-        disabled={loading}
-      >
-        <Text style={styles.signInButtonText}>
-          {loading ? 'Signing In...' : 'Sign In'}
-        </Text>
-      </TouchableOpacity>
-      
-      {/* Sign Up Link */}
-      <View style={styles.signUpContainer}>
-        <Text style={styles.signUpText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={onSwitchToSignUp}>
-          <Text style={styles.signUpLink}>Sign Up</Text>
+
+        {/* Sign In Button */}
+        <TouchableOpacity
+          style={[styles.signInButton, loading && styles.buttonDisabled]}
+          onPress={handleSignIn}
+          disabled={loading}
+        >
+          <Text style={styles.signInButtonText}>
+            {loading ? 'Signing In...' : 'Sign In'}
+          </Text>
         </TouchableOpacity>
+
+        {/* Sign Up Link */}
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={onSwitchToSignUp}>
+            <Text style={styles.signUpLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -108,20 +146,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: wp('6%'),
-    paddingVertical: Platform.OS === 'ios' ? hp('7.5%') : hp('5%'),
-    paddingTop: Platform.OS === 'ios' ? hp('10%') : StatusBar.currentHeight + hp('5%'),
+    paddingVertical: hp('5%'),
   },
   iconContainer: {
-    marginBottom: 32,
+    marginBottom: hp('4%'),
   },
   icon: {
-    width: 80,
-    height: 80,
+    width: wp('20%'),
+    height: wp('20%'),
     backgroundColor: '#10b981',
-    borderRadius: 20,
+    borderRadius: wp('5%'),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#10b981',
@@ -133,44 +173,45 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  iconText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
+
   welcomeTitle: {
-    fontSize: Platform.OS === 'ios' ? wp('8.5%') : wp('8%'),
-    fontWeight: Platform.OS === 'ios' ? '700' : '600',
+    fontSize: wp('8.5%'),
+    fontWeight: '700',
     color: '#1f2937',
     marginBottom: hp('1%'),
     textAlign: 'center',
-    letterSpacing: Platform.OS === 'ios' ? -0.5 : 0,
+    letterSpacing: -0.5,
+    // Note: Assuming 'PlusJakartaSans_700Bold' is a font you have loaded.
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   subtitle: {
-    fontSize: Platform.OS === 'ios' ? wp('4.3%') : wp('4%'),
+    fontSize: wp('4.3%'),
     color: '#6b7280',
     marginBottom: hp('5%'),
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? hp('2.8%') : hp('2.5%'),
+    lineHeight: hp('2.8%'),
+    // Note: Assuming 'PlusJakartaSans_400Regular' is a font you have loaded.
+    fontFamily: 'PlusJakartaSans_400Regular',
   },
   inputContainer: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: hp('2.5%'),
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
+    marginBottom: hp('1%'),
+    fontFamily: 'PlusJakartaSans_400Regular',
   },
   passwordHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: hp('1%'),
   },
   forgotPassword: {
-    fontSize: 14,
+    fontSize: wp('3.5%'),
     color: '#10b981',
     fontWeight: '500',
   },
@@ -178,61 +219,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
-    borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+    borderRadius: wp('3%'),
+    borderWidth: 1,
     borderColor: '#e5e7eb',
     paddingHorizontal: wp('4%'),
-    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
+    height: hp('6.5%'),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  inputIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    color: '#9ca3af',
+  inputIconStyle: {
+    marginRight: wp('3%'),
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#1f2937',
     paddingVertical: 0,
   },
   eyeIcon: {
-    padding: 4,
+    padding: wp('1%'),
   },
-  eyeIconText: {
-    fontSize: 18,
-    color: '#9ca3af',
-  },
+
   signInButton: {
     width: '100%',
-    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
+    height: hp('6.5%'),
     backgroundColor: '#10b981',
-    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
+    borderRadius: wp('3%'),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: hp('1%'),
     marginBottom: hp('4%'),
-    ...Platform.select({
-      ios: {
-        shadowColor: '#10b981',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   buttonDisabled: {
     backgroundColor: '#9ca3af',
@@ -241,8 +265,9 @@ const styles = StyleSheet.create({
   },
   signInButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: wp('4.5%'),
     fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
   signUpContainer: {
     flexDirection: 'row',
@@ -250,12 +275,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signUpText: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#6b7280',
   },
   signUpLink: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#10b981',
     fontWeight: '600',
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
 });

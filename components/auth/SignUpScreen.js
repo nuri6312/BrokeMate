@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, StatusBar, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, StatusBar } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { signUp } from '../../services/authService';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
@@ -9,6 +11,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword || !displayName) {
@@ -41,15 +44,16 @@ export default function SignUpScreen({ onSwitchToLogin }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       
-      {/* App Icon */}
-      <View style={styles.iconContainer}>
-        <View style={styles.icon}>
-          <Text style={styles.iconText}>$</Text>
+      <View style={[styles.content, { paddingTop: insets.top + hp('2%') }]}>
+        {/* App Icon */}
+        <View style={styles.iconContainer}>
+          <View style={styles.icon}>
+            <MaterialIcons name="account-balance-wallet" size={wp('9%')} color="#ffffff" />
+          </View>
         </View>
-      </View>
       
       {/* Welcome Text */}
       <Text style={styles.welcomeTitle}>Create Account</Text>
@@ -59,7 +63,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Full Name</Text>
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>👤</Text>
+          <Ionicons name="person-outline" size={wp('5%')} color="#9ca3af" style={styles.inputIconStyle} />
           <TextInput
             style={styles.input}
             placeholder="Enter your full name"
@@ -75,7 +79,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Email Address</Text>
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>✉</Text>
+          <Ionicons name="mail-outline" size={wp('5%')} color="#9ca3af" style={styles.inputIconStyle} />
           <TextInput
             style={styles.input}
             placeholder="Enter your email address"
@@ -92,7 +96,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Password</Text>
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>🔒</Text>
+          <Ionicons name="lock-closed-outline" size={wp('5%')} color="#9ca3af" style={styles.inputIconStyle} />
           <TextInput
             style={styles.input}
             placeholder="Create a password"
@@ -102,7 +106,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
             secureTextEntry
           />
           <TouchableOpacity style={styles.eyeIcon}>
-            <Text style={styles.eyeIconText}>👁</Text>
+            <Ionicons name="eye-outline" size={wp('4.5%')} color="#9ca3af" />
           </TouchableOpacity>
         </View>
       </View>
@@ -111,7 +115,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>Confirm Password</Text>
         <View style={styles.inputWrapper}>
-          <Text style={styles.inputIcon}>🔒</Text>
+          <Ionicons name="lock-closed-outline" size={wp('5%')} color="#9ca3af" style={styles.inputIconStyle} />
           <TextInput
             style={styles.input}
             placeholder="Confirm your password"
@@ -121,7 +125,7 @@ export default function SignUpScreen({ onSwitchToLogin }) {
             secureTextEntry
           />
           <TouchableOpacity style={styles.eyeIcon}>
-            <Text style={styles.eyeIconText}>👁</Text>
+            <Ionicons name="eye-outline" size={wp('4.5%')} color="#9ca3af" />
           </TouchableOpacity>
         </View>
       </View>
@@ -144,7 +148,8 @@ export default function SignUpScreen({ onSwitchToLogin }) {
           <Text style={styles.signInLink}>Sign In</Text>
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -152,20 +157,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: wp('6%'),
-    paddingVertical: Platform.OS === 'ios' ? hp('7.5%') : hp('5%'),
-    paddingTop: Platform.OS === 'ios' ? hp('10%') : StatusBar.currentHeight + hp('5%'),
+    paddingVertical: hp('5%'),
   },
   iconContainer: {
-    marginBottom: 32,
+    marginBottom: hp('3%'),
   },
   icon: {
-    width: 80,
-    height: 80,
+    width: wp('20%'),
+    height: wp('20%'),
     backgroundColor: '#10b981',
-    borderRadius: 20,
+    borderRadius: wp('5%'),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#10b981',
@@ -177,95 +184,73 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  iconText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
+
   welcomeTitle: {
-    fontSize: Platform.OS === 'ios' ? wp('8.5%') : wp('8%'),
-    fontWeight: Platform.OS === 'ios' ? '700' : '600',
+    fontSize: wp('8.5%'),
+    fontWeight: '700',
     color: '#1f2937',
     marginBottom: hp('1%'),
     textAlign: 'center',
-    letterSpacing: Platform.OS === 'ios' ? -0.5 : 0,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: Platform.OS === 'ios' ? wp('4.3%') : wp('4%'),
+    fontSize: wp('4.3%'),
     color: '#6b7280',
     marginBottom: hp('4%'),
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? hp('2.8%') : hp('2.5%'),
+    lineHeight: hp('2.8%'),
   },
   inputContainer: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: hp('2%'),
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
+    marginBottom: hp('1%'),
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
-    borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+    borderRadius: wp('3%'),
+    borderWidth: 1,
     borderColor: '#e5e7eb',
     paddingHorizontal: wp('4%'),
-    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
+    height: hp('6.5%'),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  inputIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    color: '#9ca3af',
+  inputIconStyle: {
+    marginRight: wp('3%'),
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#1f2937',
     paddingVertical: 0,
   },
   eyeIcon: {
-    padding: 4,
-  },
-  eyeIconText: {
-    fontSize: 18,
-    color: '#9ca3af',
+    padding: wp('1%'),
   },
   signUpButton: {
     width: '100%',
-    height: Platform.OS === 'ios' ? hp('6.3%') : hp('7%'),
+    height: hp('6.5%'),
     backgroundColor: '#10b981',
-    borderRadius: Platform.OS === 'ios' ? wp('2.5%') : wp('3%'),
+    borderRadius: wp('3%'),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: hp('1%'),
     marginBottom: hp('4%'),
-    ...Platform.select({
-      ios: {
-        shadowColor: '#10b981',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   buttonDisabled: {
     backgroundColor: '#9ca3af',
@@ -274,7 +259,7 @@ const styles = StyleSheet.create({
   },
   signUpButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: wp('4.5%'),
     fontWeight: '600',
   },
   signInContainer: {
@@ -283,11 +268,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signInText: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#6b7280',
   },
   signInLink: {
-    fontSize: 16,
+    fontSize: wp('4%'),
     color: '#10b981',
     fontWeight: '600',
   },

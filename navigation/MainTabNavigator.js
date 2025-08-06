@@ -1,8 +1,10 @@
 import React from 'react';
-import { Text, Platform } from 'react-native';
+import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import GroupsScreen from '../screens/GroupsScreen';
@@ -19,47 +21,42 @@ export default function MainTabNavigator({ user }) {
   const ProfileWrapper = (props) => <ProfileScreen {...props} user={user} />;
   
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#10b981',
-          tabBarInactiveTintColor: '#9ca3af',
-          tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopColor: '#e5e7eb',
-            borderTopWidth: 1,
-            height: Platform.OS === 'ios' ? hp('11%') : hp('8%'),
-            paddingBottom: Platform.OS === 'ios' ? hp('2.5%') : hp('1%'),
-            paddingTop: hp('1%'),
-            ...Platform.select({
-              ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: -2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-              },
-              android: {
-                elevation: 8,
-              },
-            }),
-          },
-          tabBarLabelStyle: {
-            fontSize: Platform.OS === 'ios' ? wp('2.8%') : wp('3%'),
-            fontWeight: '600',
-            marginBottom: Platform.OS === 'ios' ? 0 : hp('0.3%'),
-          },
-          tabBarIconStyle: {
-            marginBottom: Platform.OS === 'ios' ? hp('0.3%') : hp('0.5%'),
-          },
-        }}
-      >
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: '#10b981',
+            tabBarInactiveTintColor: '#9ca3af',
+            tabBarStyle: {
+              backgroundColor: '#ffffff',
+              borderTopColor: '#e5e7eb',
+              borderTopWidth: 1,
+              height: hp('10%'),
+              paddingBottom: hp('1.5%'),
+              paddingTop: hp('1%'),
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 8,
+            },
+            tabBarLabelStyle: {
+              fontSize: wp('3%'),
+              fontWeight: '600',
+              marginBottom: hp('0.3%'),
+            },
+            tabBarIconStyle: {
+              marginBottom: hp('0.5%'),
+            },
+          }}
+        >
         <Tab.Screen
           name="Dashboard"
           component={DashboardWrapper}
           options={{
             tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: Platform.OS === 'ios' ? wp('6%') : size, color }}>🏠</Text>
+              <Ionicons name="home-outline" size={size} color={color} />
             ),
           }}
         />
@@ -69,7 +66,7 @@ export default function MainTabNavigator({ user }) {
           component={GroupsWrapper}
           options={{
             tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: Platform.OS === 'ios' ? wp('6%') : size, color }}>👥</Text>
+              <Ionicons name="people-outline" size={size} color={color} />
             ),
           }}
         />
@@ -79,7 +76,7 @@ export default function MainTabNavigator({ user }) {
           component={ActivityWrapper}
           options={{
             tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: Platform.OS === 'ios' ? wp('6%') : size, color }}>🔔</Text>
+              <Ionicons name="notifications-outline" size={size} color={color} />
             ),
           }}
         />
@@ -89,11 +86,12 @@ export default function MainTabNavigator({ user }) {
           component={ProfileWrapper}
           options={{
             tabBarIcon: ({ color, size }) => (
-              <Text style={{ fontSize: Platform.OS === 'ios' ? wp('6%') : size, color }}>👤</Text>
+              <Ionicons name="person-outline" size={size} color={color} />
             ),
           }}
         />
-      </Tab.Navigator>
-    </NavigationContainer>
+        </Tab.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
