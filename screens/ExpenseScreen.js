@@ -149,7 +149,7 @@ export default function ExpenseScreen({ user }) {
                 </View>
               </View>
 
-    
+
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.textInput}

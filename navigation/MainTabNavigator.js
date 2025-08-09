@@ -16,6 +16,8 @@ import ExpenseScreen from '../screens/ExpenseScreen';
 import NewGroupScreen from '../screens/NewGroupScreen';
 import AddMembersScreen from '../screens/AddMembersScreen';
 import GroupDetailsScreen from '../screens/GroupDetailsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -158,6 +160,20 @@ export default function MainTabNavigator({ user }) {
           <Stack.Screen
             name="GroupDetails"
             component={GroupDetailsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
             options={{
               headerShown: false,
             }}
