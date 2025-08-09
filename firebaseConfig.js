@@ -1,4 +1,3 @@
-
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
@@ -8,13 +7,13 @@ import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyC2VWSLkzTe2dSkq1QzLB7-MbmZdTWW97k",
-  authDomain: "brokemate-2e0b7.firebaseapp.com",
-  projectId: "brokemate-2e0b7",
-  storageBucket: "brokemate-2e0b7.firebasestorage.app",
-  messagingSenderId: "218818072529",
-  appId: "1:218818072529:web:6e0b69c49a4bc76a4c9af0",
-  measurementId: "G-3N3Y9F1VNJ"
+  apiKey: "AIzaSyCd105qRUoyNFTpJ4aSDS6CeF8-DweltZY",
+  authDomain: "projectbrokemate.firebaseapp.com",
+  projectId: "projectbrokemate",
+  storageBucket: "projectbrokemate.firebasestorage.app",
+  messagingSenderId: "132964581710",
+  appId: "1:132964581710:web:c71e24742d2b73224cde1f",
+  measurementId: "G-1K1C5KLGB2"
 };
 
 // Initialize Firebase

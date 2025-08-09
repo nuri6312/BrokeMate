@@ -3,6 +3,8 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, StatusBar }
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { signUp } from '../../services/authService';
+import { createUserWithProfile } from '../../services/authService';
+
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 export default function SignUpScreen({ onSwitchToLogin }) {
@@ -30,7 +32,8 @@ export default function SignUpScreen({ onSwitchToLogin }) {
     }
 
     setLoading(true);
-    const result = await signUp(email, password, displayName);
+    const result = await createUserWithProfile(email, password, displayName);
+
     setLoading(false);
 
     if (result.success) {
