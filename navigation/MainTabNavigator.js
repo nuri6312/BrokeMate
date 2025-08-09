@@ -12,6 +12,10 @@ import ActivityScreen from '../screens/ActivityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import AddExpenseScreen from '../screens/AddExpenseScreen';
 import ExpenseDetailsScreen from '../screens/ExpenseDetailsScreen';
+import ExpenseScreen from '../screens/ExpenseScreen';
+import NewGroupScreen from '../screens/NewGroupScreen';
+import AddMembersScreen from '../screens/AddMembersScreen';
+import GroupDetailsScreen from '../screens/GroupDetailsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -98,6 +102,8 @@ function TabNavigator({ user }) {
 export default function MainTabNavigator({ user }) {
   // Create wrapper for AddExpenseScreen
   const AddExpenseWrapper = (props) => <AddExpenseScreen {...props} user={user} route={props.route} />;
+  // Create wrapper for ExpenseScreen
+  const ExpenseWrapper = (props) => <ExpenseScreen {...props} user={user} />;
 
   return (
     <SafeAreaProvider>
@@ -122,6 +128,36 @@ export default function MainTabNavigator({ user }) {
           <Stack.Screen
             name="ExpenseDetails"
             component={ExpenseDetailsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="Expense"
+            component={ExpenseWrapper}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="NewGroup"
+            component={NewGroupScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="AddMembers"
+            component={AddMembersScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="GroupDetails"
+            component={GroupDetailsScreen}
             options={{
               headerShown: false,
             }}
