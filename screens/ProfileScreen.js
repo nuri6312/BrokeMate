@@ -1,24 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Alert, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { logOut } from '../services/authService';
+import { getCurrentUserProfile } from '../services/profileService';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ user, navigation }) {
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  useEffect(() => {
+    // Listen for navigation focus to refresh data when returning from edit
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserProfile();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadUserProfile = async () => {
+    try {
+      setLoading(true);
+      const result = await getCurrentUserProfile();
+      
+      if (result.success) {
+        setProfileData({
+          name: result.data.displayName || 'User',
+          username: `@${result.data.displayName?.toLowerCase().replace(/\s+/g, '') || 'user'}`,
+          email: result.data.email,
+          phone: result.data.phoneNumber || 'Not provided',
+          avatar: result.data.photoURL || 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=200&h=200&fit=crop&crop=face',
+        });
+      } else {
+        console.error('Failed to load profile:', result.error);
+        // Fallback to default data
+        setProfileData({
+          name: user?.displayName || 'User',
+          username: `@${user?.displayName?.toLowerCase().replace(/\s+/g, '') || 'user'}`,
+          email: user?.email || 'No email',
+          phone: 'Not provided',
+          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=200&h=200&fit=crop&crop=face',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     const result = await logOut();
     if (!result.success) {
       Alert.alert('Error', result.error);
     }
-  };
-
-  const profileData = {
-    name: 'Sophia Clark',
-    username: '@sophia.clark',
-    email: 'sophia.clark@email.com',
-    phone: '+1 (555) 123-4567',
-    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=200&h=200&fit=crop&crop=face',
   };
 
   const menuItems = [
@@ -58,18 +98,27 @@ export default function ProfileScreen({ user, navigation }) {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: profileData.avatar }} style={styles.avatar} />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-          <Text style={styles.userName}>{profileData.name}</Text>
-          <Text style={styles.userHandle}>{profileData.username}</Text>
-          
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity>
-        </View>
+        ) : profileData ? (
+          <>
+            {/* Profile Header */}
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarContainer}>
+                <Image source={{ uri: profileData.avatar }} style={styles.avatar} />
+              </View>
+              <Text style={styles.userName}>{profileData.name}</Text>
+              <Text style={styles.userHandle}>{profileData.username}</Text>
+              
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
 
         {/* Account Section */}
         <View style={styles.section}>
@@ -115,12 +164,21 @@ export default function ProfileScreen({ user, navigation }) {
           ))}
         </View>
 
-        {/* Logout Button */}
-        <View style={styles.logoutContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Logout Button */}
+            <View style={styles.logoutContainer}>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Failed to load profile</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadUserProfile}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -274,5 +332,37 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: wp('4.5%'),
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: hp('10%'),
+  },
+  loadingText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: hp('10%'),
+  },
+  errorText: {
+    fontSize: wp('4%'),
+    color: '#ef4444',
+    marginBottom: hp('2%'),
+  },
+  retryButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: wp('6%'),
+    paddingVertical: hp('1.5%'),
+    borderRadius: wp('3%'),
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: wp('4%'),
+    fontWeight: '500',
   },
 });

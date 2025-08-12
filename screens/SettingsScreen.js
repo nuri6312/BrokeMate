@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,13 +7,67 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { Ionicons } from '@expo/vector-icons';
+import { 
+  updateNotificationPreferences, 
+  updateUserPreferences,
+  getCurrentUserProfile 
+} from '../services/profileService';
 
 export default function SettingsScreen({ navigation }) {
   const [pushNotifications, setPushNotifications] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('USD');
+
+  useEffect(() => {
+    loadUserPreferences();
+  }, []);
+
+  const loadUserPreferences = async () => {
+    try {
+      const result = await getCurrentUserProfile();
+      if (result.success && result.data.preferences) {
+        setPushNotifications(result.data.preferences.notifications?.pushEnabled || false);
+        setCurrency(result.data.preferences.currency || 'USD');
+      }
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotificationToggle = async (value) => {
+    setPushNotifications(value);
+    
+    const result = await updateNotificationPreferences({
+      pushEnabled: value
+    });
+    
+    if (!result.success) {
+      // Revert on error
+      setPushNotifications(!value);
+      Alert.alert('Error', 'Failed to update notification settings');
+    }
+  };
+
+  const handleCurrencyChange = async (newCurrency) => {
+    setCurrency(newCurrency);
+    
+    const result = await updateUserPreferences({
+      currency: newCurrency
+    });
+    
+    if (!result.success) {
+      // Revert on error
+      setCurrency(currency);
+      Alert.alert('Error', 'Failed to update currency setting');
+    }
+  };
 
   const settingsItems = [
     {
@@ -52,6 +106,12 @@ export default function SettingsScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading settings...</Text>
+          </View>
+        ) : (
+          <>
         {/* Notifications Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
@@ -65,9 +125,10 @@ export default function SettingsScreen({ navigation }) {
             </View>
             <Switch
               value={pushNotifications}
-              onValueChange={setPushNotifications}
+              onValueChange={handleNotificationToggle}
               trackColor={{ false: '#e5e7eb', true: '#3b82f6' }}
               thumbColor={pushNotifications ? '#ffffff' : '#ffffff'}
+              disabled={loading}
             />
           </View>
         </View>
@@ -76,7 +137,21 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
           
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity 
+            style={styles.settingItem}
+            onPress={() => {
+              Alert.alert(
+                'Select Currency',
+                'Choose your preferred currency',
+                [
+                  { text: 'USD', onPress: () => handleCurrencyChange('USD') },
+                  { text: 'EUR', onPress: () => handleCurrencyChange('EUR') },
+                  { text: 'GBP', onPress: () => handleCurrencyChange('GBP') },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
+          >
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Currency</Text>
               <Text style={styles.settingDescription}>
@@ -84,7 +159,7 @@ export default function SettingsScreen({ navigation }) {
               </Text>
             </View>
             <View style={styles.currencyValue}>
-              <Text style={styles.currencyText}>USD</Text>
+              <Text style={styles.currencyText}>{currency}</Text>
               <Ionicons name="chevron-forward" size={wp('4%')} color="#9ca3af" />
             </View>
           </TouchableOpacity>
@@ -105,6 +180,8 @@ export default function SettingsScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -196,5 +273,15 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: wp('4.5%'),
     color: '#1f2937',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: hp('10%'),
+  },
+  loadingText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
   },
 });

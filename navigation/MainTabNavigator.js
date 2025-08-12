@@ -18,6 +18,7 @@ import AddMembersScreen from '../screens/AddMembersScreen';
 import GroupDetailsScreen from '../screens/GroupDetailsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -174,6 +175,13 @@ export default function MainTabNavigator({ user }) {
           <Stack.Screen
             name="Notifications"
             component={NotificationsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
             options={{
               headerShown: false,
             }}
