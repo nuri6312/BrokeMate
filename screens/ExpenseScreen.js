@@ -72,7 +72,7 @@ export default function ExpenseScreen({ user, navigation }) {
             <Ionicons
               name={getCategoryIcon(item.category)}
               size={wp('5%')}
-              color="#3b82f6"
+              color="#10b981"
             />
           </View>
           <View style={styles.expenseInfo}>
@@ -100,7 +100,7 @@ export default function ExpenseScreen({ user, navigation }) {
       <View style={styles.content}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
+            <ActivityIndicator size="large" color="#10b981" />
             <Text style={styles.loadingText}>Loading expenses...</Text>
           </View>
         ) : expenses.length === 0 ? (
@@ -269,11 +269,11 @@ const styles = StyleSheet.create({
     right: wp('6%'),
     width: wp('14%'),
     height: wp('14%'),
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     borderRadius: wp('7%'),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

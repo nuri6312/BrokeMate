@@ -126,7 +126,7 @@ export default function SettingsScreen({ navigation }) {
             <Switch
               value={pushNotifications}
               onValueChange={handleNotificationToggle}
-              trackColor={{ false: '#e5e7eb', true: '#3b82f6' }}
+              trackColor={{ false: '#e5e7eb', true: '#10b981' }}
               thumbColor={pushNotifications ? '#ffffff' : '#ffffff'}
               disabled={loading}
             />

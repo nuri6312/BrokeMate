@@ -30,14 +30,24 @@ export default function SettleBalancesScreen({ navigation, route }) {
   const loadBalances = async () => {
     try {
       setLoading(true);
+      console.log('Loading balances for group:', group.id);
+      console.log('Group members:', group.members);
+      
       const groupBalances = await calculateGroupBalances(group.id, group.members);
+      console.log('Calculated balances:', groupBalances);
+      
       setBalances(groupBalances);
       
-      // Calculate optimal settlements
+      // Calculate optimal settlements using the same balance data
       const optimalSettlements = calculateOptimalSettlements(groupBalances, group.memberDetails);
+      console.log('Calculated settlements:', optimalSettlements);
+      
       setSettlements(optimalSettlements);
     } catch (error) {
       console.error('Error loading balances:', error);
+      // Set empty arrays on error to avoid inconsistent state
+      setBalances([]);
+      setSettlements([]);
     } finally {
       setLoading(false);
     }
@@ -45,11 +55,27 @@ export default function SettleBalancesScreen({ navigation, route }) {
 
   // Calculate optimal settlements to minimize number of transactions
   const calculateOptimalSettlements = (balances, memberDetails) => {
-    if (balances.length === 0) return [];
+    if (!balances || balances.length === 0) {
+      console.log('No balances to calculate settlements for');
+      return [];
+    }
+
+    console.log('Calculating settlements from balances:', balances);
 
     const settlements = [];
-    const creditors = balances.filter(b => b.amount > 0).sort((a, b) => b.amount - a.amount);
-    const debtors = balances.filter(b => b.amount < 0).sort((a, b) => a.amount - b.amount);
+    // Create copies to avoid mutating original data
+    const creditors = balances
+      .filter(b => b.amount > 0.01)
+      .map(b => ({ ...b }))
+      .sort((a, b) => b.amount - a.amount);
+    
+    const debtors = balances
+      .filter(b => b.amount < -0.01)
+      .map(b => ({ ...b }))
+      .sort((a, b) => a.amount - b.amount);
+
+    console.log('Creditors:', creditors);
+    console.log('Debtors:', debtors);
 
     let i = 0, j = 0;
     
@@ -76,6 +102,7 @@ export default function SettleBalancesScreen({ navigation, route }) {
       if (Math.abs(debtor.amount) < 0.01) j++;
     }
     
+    console.log('Final settlements:', settlements);
     return settlements;
   };
 
@@ -125,8 +152,8 @@ export default function SettleBalancesScreen({ navigation, route }) {
       
       if (result.success) {
         Alert.alert('Success', 'Settlement recorded successfully!');
-        // Reload balances
-        loadBalances();
+        // Reload balances to sync both sections
+        await loadBalances();
       } else {
         Alert.alert('Error', result.error || 'Failed to record settlement');
       }
@@ -190,7 +217,13 @@ export default function SettleBalancesScreen({ navigation, route }) {
           <Ionicons name="arrow-back" size={wp('6%')} color="#1f2937" />
         </TouchableOpacity>
         <Text style={styles.title}>Settle Balances</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity 
+          style={styles.refreshButton}
+          onPress={loadBalances}
+          disabled={loading}
+        >
+          <Ionicons name="refresh" size={wp('5%')} color="#10b981" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -241,28 +274,37 @@ export default function SettleBalancesScreen({ navigation, route }) {
           </>
         )}
 
-        {/* Current Balances Section */}
-        {balances.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current Balances</Text>
-            {balances.map((balance) => {
-              const memberName = group.memberDetails[balance.userId]?.name || 'Unknown';
-              const isPositive = balance.amount > 0;
+        {/* Current Balances Section - Always show for transparency */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Current Balances</Text>
+          <Text style={styles.sectionSubtitle}>
+            Individual balance for each member in this group
+          </Text>
+          
+          {group.members && group.members.length > 0 ? (
+            group.members.map((memberId) => {
+              const memberName = group.memberDetails[memberId]?.name || 'Unknown';
+              const memberBalance = balances.find(b => b.userId === memberId);
+              const amount = memberBalance ? memberBalance.amount : 0;
+              const isPositive = amount > 0.01;
+              const isNegative = amount < -0.01;
               
               return (
-                <View key={balance.userId} style={styles.balanceItem}>
+                <View key={memberId} style={styles.balanceItem}>
                   <Text style={styles.memberName}>{memberName}</Text>
                   <Text style={[
                     styles.balanceAmount,
-                    isPositive ? styles.owedAmount : styles.oweAmount
+                    isPositive ? styles.owedAmount : isNegative ? styles.oweAmount : styles.settledAmount
                   ]}>
-                    {isPositive ? '+' : ''}${balance.amount.toFixed(2)}
+                    {isPositive ? '+' : ''}${Math.abs(amount).toFixed(2)}
                   </Text>
                 </View>
               );
-            })}
-          </View>
-        )}
+            })
+          ) : (
+            <Text style={styles.noMembersText}>No members found</Text>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -296,8 +338,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
-  placeholder: {
-    width: wp('10%'),
+  refreshButton: {
+    padding: wp('2%'),
   },
   content: {
     flex: 1,
@@ -353,7 +395,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   settleButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     borderRadius: wp('2%'),
     paddingVertical: hp('1.5%'),
     alignItems: 'center',
@@ -405,6 +447,15 @@ const styles = StyleSheet.create({
   },
   oweAmount: {
     color: '#ef4444',
+  },
+  settledAmount: {
+    color: '#6b7280',
+  },
+  noMembersText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: hp('2%'),
   },
   settledContainer: {
     flex: 1,

@@ -214,7 +214,7 @@ export default function ExpenseDetailsScreen({ navigation, route }) {
               {/* Group Expense Info */}
               <Text style={styles.sectionTitle}>Split Details</Text>
               <View style={styles.groupExpenseNote}>
-                <Ionicons name="people-outline" size={wp('5%')} color="#3b82f6" />
+                <Ionicons name="people-outline" size={wp('5%')} color="#10b981" />
                 <Text style={styles.groupExpenseText}>
                   Group expense {group?.name ? `in ${group.name}` : ''}
                 </Text>
@@ -429,12 +429,12 @@ const styles = StyleSheet.create({
     padding: wp('4%'),
     borderRadius: wp('3%'),
     borderLeftWidth: 4,
-    borderLeftColor: '#3b82f6',
+    borderLeftColor: '#10b981',
     marginBottom: hp('2%'),
   },
   groupExpenseText: {
     fontSize: wp('4%'),
-    color: '#3b82f6',
+    color: '#10b981',
     marginLeft: wp('2%'),
     fontWeight: '500',
   },
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     gap: hp('1.5%'),
   },
   editButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     borderRadius: wp('6%'),
     paddingVertical: hp('2%'),
     alignItems: 'center',
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: wp('4.5%'),
-    color: '#3b82f6',
+    color: '#10b981',
     fontWeight: '600',
   },
   bottomPadding: {
@@ -518,14 +518,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: hp('2%'),
     right: wp('2%'),
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     borderRadius: wp('8%'),
     paddingVertical: hp('1.5%'),
     paddingHorizontal: wp('4%'),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

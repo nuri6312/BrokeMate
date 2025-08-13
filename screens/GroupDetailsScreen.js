@@ -210,7 +210,7 @@ export default function GroupDetailsScreen({ navigation, route }) {
               style={styles.addMemberButton}
               onPress={() => navigation.navigate('AddMembers', { groupId: groupData.id })}
             >
-              <Ionicons name="person-add" size={wp('5%')} color="#3b82f6" />
+              <Ionicons name="person-add" size={wp('5%')} color="#10b981" />
             </TouchableOpacity>
           </View>
           {Object.entries(groupData.memberDetails || {}).map(([memberId, memberInfo]) => (
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   addExpenseButton: {
     flex: 1,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     paddingVertical: hp('1.8%'),
     borderRadius: wp('6%'),
     alignItems: 'center',
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   creatorBadge: {
     fontSize: wp('3.5%'),
-    color: '#3b82f6',
+    color: '#10b981',
     fontWeight: '500',
   },
 });

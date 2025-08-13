@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   addButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     paddingVertical: hp('2%'),
     borderRadius: wp('8%'),
     alignItems: 'center',

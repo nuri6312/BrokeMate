@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   createButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#10b981',
     marginHorizontal: wp('6%'),
     marginBottom: hp('3%'),
     paddingVertical: hp('2%'),

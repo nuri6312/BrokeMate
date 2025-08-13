@@ -28,7 +28,7 @@ import { SPLIT_TYPES } from '../models/dataModels';
 const categories = [
   { id: 'housing', name: 'Housing & Utilities', icon: 'home-outline', color: '#10b981' },
   { id: 'food', name: 'Food & Dining', icon: 'restaurant-outline', color: '#f59e0b' },
-  { id: 'transport', name: 'Transportation', icon: 'car-outline', color: '#3b82f6' },
+  { id: 'transport', name: 'Transportation', icon: 'car-outline', color: '#10b981' },
   { id: 'entertainment', name: 'Entertainment', icon: 'film-outline', color: '#8b5cf6' },
   { id: 'shopping', name: 'Shopping', icon: 'bag-outline', color: '#ec4899' },
   { id: 'health', name: 'Health & Medical', icon: 'medical-outline', color: '#ef4444' },
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: wp('4.5%'),
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#10b981',
   },
   // Modal styles
   modalContainer: {
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   },
   datePickerButton: {
     fontSize: wp('4%'),
-    color: '#3b82f6',
+    color: '#10b981',
     fontWeight: '500',
   },
   datePickerDone: {
