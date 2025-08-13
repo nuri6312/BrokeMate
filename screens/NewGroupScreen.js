@@ -22,40 +22,105 @@ export default function NewGroupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleInviteMember = () => {
-    if (memberEmail.trim()) {
-      setMembers([...members, { id: Date.now().toString(), email: memberEmail.trim() }]);
-      setMemberEmail('');
+    const email = memberEmail.trim().toLowerCase();
+    
+    if (!email) {
+      Alert.alert('Error', 'Please enter an email address');
+      return;
     }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    // Check if email is already added
+    if (members.some(member => member.email === email)) {
+      Alert.alert('Error', 'This email is already added to the group');
+      return;
+    }
+
+    setMembers([...members, { id: Date.now().toString(), email }]);
+    setMemberEmail('');
   };
 
   const handleCreateGroup = async () => {
-    if (groupName.trim()) {
-      try {
-        setLoading(true);
-        
-        const groupData = {
-          name: groupName.trim(),
-          description: '',
-          imageURL: '',
-          currency: 'USD'
-        };
+    if (!groupName.trim()) {
+      Alert.alert('Error', 'Please enter a group name');
+      return;
+    }
 
-        const result = await createGroup(groupData);
+    try {
+      setLoading(true);
+      
+      const groupData = {
+        name: groupName.trim(),
+        description: '',
+        imageURL: '',
+        currency: 'USD'
+      };
+
+      const result = await createGroup(groupData);
+      
+      if (result.success) {
+        let successMessage = 'Group created successfully!';
+        let failedMembers = [];
+
+        // If group created successfully and there are members to add
+        if (members.length > 0) {
+          const memberResults = await addMembersToNewGroup(result.id, members);
+          failedMembers = memberResults.failed;
+          
+          if (memberResults.successful > 0) {
+            successMessage = `Group created with ${memberResults.successful} member${memberResults.successful !== 1 ? 's' : ''} added!`;
+          }
+        }
         
-        if (result.success) {
-          Alert.alert('Success', 'Group created successfully!', [
+        if (failedMembers.length > 0) {
+          Alert.alert(
+            'Group Created', 
+            `${successMessage}\n\nCouldn't add: ${failedMembers.join(', ')}\n(They might not have accounts yet)`,
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        } else {
+          Alert.alert('Success', successMessage, [
             { text: 'OK', onPress: () => navigation.goBack() }
           ]);
+        }
+      } else {
+        Alert.alert('Error', result.error);
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+      Alert.alert('Error', 'Failed to create group');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addMembersToNewGroup = async (groupId, membersList) => {
+    const { addMemberToGroup } = await import('../services/groupService');
+    let successful = 0;
+    let failed = [];
+    
+    for (const member of membersList) {
+      try {
+        const result = await addMemberToGroup(groupId, member.email);
+        if (result.success) {
+          successful++;
         } else {
-          Alert.alert('Error', result.error);
+          failed.push(member.email);
+          console.warn(`Failed to add member ${member.email}:`, result.error);
         }
       } catch (error) {
-        console.error('Error creating group:', error);
-        Alert.alert('Error', 'Failed to create group');
-      } finally {
-        setLoading(false);
+        failed.push(member.email);
+        console.error(`Error adding member ${member.email}:`, error);
       }
     }
+    
+    return { successful, failed };
   };
 
   return (
@@ -92,12 +157,15 @@ export default function NewGroupScreen({ navigation }) {
             <View style={styles.inviteContainer}>
               <TextInput
                 style={styles.memberInput}
-                placeholder="Email or username"
+                placeholder="Enter email address"
                 placeholderTextColor="#9ca3af"
                 value={memberEmail}
                 onChangeText={setMemberEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                onSubmitEditing={handleInviteMember}
+                returnKeyType="done"
               />
               <TouchableOpacity 
                 style={styles.inviteButton}
@@ -206,7 +274,7 @@ const styles = StyleSheet.create({
     marginRight: wp('3%'),
   },
   inviteButton: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#10b981',
     paddingHorizontal: wp('6%'),
     paddingVertical: hp('2%'),
     borderRadius: wp('3%'),
@@ -214,8 +282,8 @@ const styles = StyleSheet.create({
   },
   inviteButtonText: {
     fontSize: wp('4%'),
-    fontWeight: '500',
-    color: '#1f2937',
+    fontWeight: '600',
+    color: '#ffffff',
   },
   memberItem: {
     flexDirection: 'row',
