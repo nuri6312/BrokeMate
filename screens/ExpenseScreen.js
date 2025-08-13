@@ -61,32 +61,58 @@ export default function ExpenseScreen({ user, navigation }) {
     return categoryMap[categoryId] || 'ellipsis-horizontal-outline';
   };
 
-  const renderExpenseItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.expenseItem}
-      onPress={() => navigation?.navigate('ExpenseDetails', { expense: item })}
-    >
-      <View style={styles.expenseHeader}>
-        <View style={styles.expenseLeft}>
-          <View style={styles.categoryIcon}>
-            <Ionicons
-              name={getCategoryIcon(item.category)}
-              size={wp('5%')}
-              color="#10b981"
-            />
+  const renderExpenseItem = ({ item }) => {
+    const isGroupExpense = !!item.groupId;
+    const userSplit = item.splitDetails?.[user?.uid];
+    const userPaid = item.paidBy === user?.uid;
+    
+    return (
+      <TouchableOpacity
+        style={styles.expenseItem}
+        onPress={() => navigation?.navigate('ExpenseDetails', { expense: item })}
+      >
+        <View style={styles.expenseHeader}>
+          <View style={styles.expenseLeft}>
+            <View style={styles.categoryIcon}>
+              <Ionicons
+                name={getCategoryIcon(item.category)}
+                size={wp('5%')}
+                color="#10b981"
+              />
+            </View>
+            <View style={styles.expenseInfo}>
+              <Text style={styles.expenseTitle}>{item.title}</Text>
+              <Text style={styles.expenseDescription}>
+                {item.description || (isGroupExpense ? 'Group expense' : 'Personal expense')}
+              </Text>
+              {isGroupExpense && (
+                <View style={styles.expenseMetadata}>
+                  <Ionicons name="people-outline" size={wp('3.5%')} color="#6b7280" />
+                  <Text style={styles.groupIndicator}>
+                    {userPaid ? 'You paid' : `Paid by ${item.paidByName || 'Unknown'}`}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-          <View style={styles.expenseInfo}>
-            <Text style={styles.expenseTitle}>{item.title}</Text>
-            <Text style={styles.expenseDescription}>{item.description}</Text>
+          <View style={styles.expenseRight}>
+            <Text style={[
+              styles.expenseAmount,
+              userPaid && styles.expenseAmountPaid
+            ]}>
+              ${formatAmount(isGroupExpense && userSplit ? userSplit.amount : item.amount)}
+            </Text>
+            <Text style={styles.expenseDate}>{formatDate(item.date)}</Text>
+            {isGroupExpense && (
+              <Text style={styles.totalAmount}>
+                Total: ${formatAmount(item.amount)}
+              </Text>
+            )}
           </View>
         </View>
-        <View style={styles.expenseRight}>
-          <Text style={styles.expenseAmount}>{formatAmount(item.amount)}</Text>
-          <Text style={styles.expenseDate}>{formatDate(item.date)}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -94,7 +120,7 @@ export default function ExpenseScreen({ user, navigation }) {
 
       <View style={styles.header}>
         <Text style={styles.title}>Expenses</Text>
-        <Text style={styles.subtitle}>Track your personal spending</Text>
+        <Text style={styles.subtitle}>Track your personal and group expenses</Text>
       </View>
 
       <View style={styles.content}>
@@ -228,9 +254,27 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: hp('0.3%'),
   },
+  expenseAmountPaid: {
+    color: '#10b981',
+  },
   expenseDate: {
     fontSize: wp('3.5%'),
     color: '#6b7280',
+  },
+  expenseMetadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: hp('0.5%'),
+  },
+  groupIndicator: {
+    fontSize: wp('3.2%'),
+    color: '#6b7280',
+    marginLeft: wp('1%'),
+  },
+  totalAmount: {
+    fontSize: wp('3%'),
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,

@@ -215,7 +215,7 @@ export default function GroupDetailsScreen({ navigation, route }) {
           </View>
           {Object.entries(groupData.memberDetails || {}).map(([memberId, memberInfo]) => (
             <View key={memberId} style={styles.memberItem}>
-              <Text style={styles.memberName}>{memberInfo.name}</Text>
+              <Text style={styles.memberName}>{memberInfo?.name || memberInfo?.displayName || 'Unknown Member'}</Text>
               {memberId === groupData.createdBy && (
                 <Text style={styles.creatorBadge}>Creator</Text>
               )}
@@ -366,7 +366,8 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: wp('4.5%'),
-    color: '#1f2937',
+    color: '#000000',
+    fontWeight: '600',
   },
   bottomButtons: {
     flexDirection: 'row',

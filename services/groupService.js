@@ -341,7 +341,7 @@ export const updateGroup = async (groupId, updateData) => {
   }
 };
 
-// Delete group
+// Delete group completely
 export const deleteGroup = async (groupId) => {
   try {
     const currentUser = auth.currentUser;
@@ -363,11 +363,24 @@ export const deleteGroup = async (groupId) => {
       return { success: false, error: 'Only group creator can delete the group' };
     }
 
-    // Soft delete - mark as inactive
-    await updateDoc(groupRef, {
-      isActive: false,
-      updatedAt: createTimestamp()
+    // Delete all expenses associated with this group
+    const expensesQuery = query(
+      collection(db, 'expenses'),
+      where('groupId', '==', groupId)
+    );
+    
+    const expensesSnapshot = await getDocs(expensesQuery);
+    const deletePromises = [];
+    
+    expensesSnapshot.forEach((expenseDoc) => {
+      deletePromises.push(deleteDoc(doc(db, 'expenses', expenseDoc.id)));
     });
+    
+    // Wait for all expenses to be deleted
+    await Promise.all(deletePromises);
+
+    // Delete the group document
+    await deleteDoc(groupRef);
 
     return { success: true };
   } catch (error) {

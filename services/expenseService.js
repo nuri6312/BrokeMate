@@ -164,9 +164,36 @@ export const getUserExpenses = async () => {
     const querySnapshot = await getDocs(q);
     const expenses = [];
 
-    querySnapshot.forEach((doc) => {
-      expenses.push({ id: doc.id, ...doc.data() });
-    });
+    // Get group details for group expenses
+    const groupCache = {};
+
+    for (const docSnap of querySnapshot.docs) {
+      const expenseData = { id: docSnap.id, ...docSnap.data() };
+      
+      // If it's a group expense, get group details for member names
+      if (expenseData.groupId && !groupCache[expenseData.groupId]) {
+        try {
+          const groupRef = doc(db, 'groups', expenseData.groupId);
+          const groupSnap = await getDoc(groupRef);
+          if (groupSnap.exists()) {
+            groupCache[expenseData.groupId] = groupSnap.data();
+          }
+        } catch (error) {
+          console.error('Error fetching group details:', error);
+        }
+      }
+
+      // Add payer name if it's a group expense
+      if (expenseData.groupId && groupCache[expenseData.groupId]) {
+        const group = groupCache[expenseData.groupId];
+        const payerInfo = group.memberDetails?.[expenseData.paidBy];
+        if (payerInfo) {
+          expenseData.paidByName = payerInfo.name;
+        }
+      }
+
+      expenses.push(expenseData);
+    }
 
     // Sort by date in JavaScript
     expenses.sort((a, b) => {
@@ -312,11 +339,38 @@ export const listenToUserExpenses = (callback) => {
     where('participants', 'array-contains', currentUser.uid)
   );
 
-  return onSnapshot(q, (querySnapshot) => {
+  return onSnapshot(q, async (querySnapshot) => {
     const expenses = [];
-    querySnapshot.forEach((doc) => {
-      expenses.push({ id: doc.id, ...doc.data() });
-    });
+    const groupCache = {};
+
+    // Process each expense and get group details if needed
+    for (const docSnap of querySnapshot.docs) {
+      const expenseData = { id: docSnap.id, ...docSnap.data() };
+      
+      // If it's a group expense, get group details for member names
+      if (expenseData.groupId && !groupCache[expenseData.groupId]) {
+        try {
+          const groupRef = doc(db, 'groups', expenseData.groupId);
+          const groupSnap = await getDoc(groupRef);
+          if (groupSnap.exists()) {
+            groupCache[expenseData.groupId] = groupSnap.data();
+          }
+        } catch (error) {
+          console.error('Error fetching group details:', error);
+        }
+      }
+
+      // Add payer name if it's a group expense
+      if (expenseData.groupId && groupCache[expenseData.groupId]) {
+        const group = groupCache[expenseData.groupId];
+        const payerInfo = group.memberDetails?.[expenseData.paidBy];
+        if (payerInfo) {
+          expenseData.paidByName = payerInfo.name;
+        }
+      }
+
+      expenses.push(expenseData);
+    }
     
     // Sort by date in JavaScript
     expenses.sort((a, b) => {

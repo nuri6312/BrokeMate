@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -23,6 +23,7 @@ import {
 } from 'react-native-responsive-screen';
 import { addPersonalExpense } from '../services/databaseService';
 import { addGroupExpense } from '../services/expenseService';
+import { getUserGroups } from '../services/groupService';
 import { SPLIT_TYPES } from '../models/dataModels';
 
 const categories = [
@@ -60,6 +61,30 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
     group?.members || [user?.uid || '']
   );
 
+  // New states for expense splitting
+  const [userGroups, setUserGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(group || null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [splitType, setSplitType] = useState(SPLIT_TYPES.EQUAL);
+  const [customSplits, setCustomSplits] = useState({});
+  const [showSplitModal, setShowSplitModal] = useState(false);
+
+  // Load user groups on component mount
+  useEffect(() => {
+    loadUserGroups();
+  }, []);
+
+  const loadUserGroups = async () => {
+    try {
+      const result = await getUserGroups();
+      if (result.success) {
+        setUserGroups(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading groups:', error);
+    }
+  };
+
   const handleDateChange = (event, date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
@@ -95,9 +120,23 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
       return;
     }
 
-    if (isGroupExpense && (!selectedPayer || selectedParticipants.length === 0)) {
+    const currentGroup = selectedGroup || group;
+    const isCurrentlyGroupExpense = isGroupExpense || !!selectedGroup;
+
+    if (isCurrentlyGroupExpense && (!selectedPayer || selectedParticipants.length === 0)) {
       Alert.alert('Error', 'Please select who paid and participants');
       return;
+    }
+
+    // Validate custom splits for unequal splitting
+    if (isCurrentlyGroupExpense && splitType === SPLIT_TYPES.EXACT) {
+      const totalCustomSplit = Object.values(customSplits).reduce((sum, amt) => sum + (amt || 0), 0);
+      const expenseAmount = parseFloat(amount);
+      
+      if (Math.abs(totalCustomSplit - expenseAmount) > 0.01) {
+        Alert.alert('Error', `Split amounts must total $${expenseAmount.toFixed(2)}`);
+        return;
+      }
     }
 
     const expenseData = {
@@ -108,12 +147,15 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
       date: selectedDate,
     };
 
-    if (isGroupExpense) {
+    if (isCurrentlyGroupExpense) {
       // Add group-specific data
-      expenseData.groupId = groupId;
+      expenseData.groupId = currentGroup.id;
       expenseData.paidBy = selectedPayer;
       expenseData.participants = selectedParticipants;
-      expenseData.splitType = SPLIT_TYPES.EQUAL; // Default to equal split for now
+      expenseData.splitType = splitType;
+      if (splitType === SPLIT_TYPES.EXACT) {
+        expenseData.customSplits = customSplits;
+      }
     }
 
     if (isEditing) {
@@ -123,8 +165,8 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
     } else {
       try {
         let result;
-        
-        if (isGroupExpense) {
+
+        if (isCurrentlyGroupExpense) {
           console.log('Adding group expense:', expenseData);
           result = await addGroupExpense(expenseData);
         } else {
@@ -179,7 +221,9 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
           <Ionicons name="close" size={wp('6%')} color="#1f2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Expense' : isGroupExpense ? `Add to ${group?.name}` : 'Add Expense'}
+          {isEditing ? 'Edit Expense' : 
+           isGroupExpense ? `Add to ${group?.name}` : 
+           selectedGroup ? `Add to ${selectedGroup.name}` : 'Add Expense'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -263,28 +307,86 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
           </TouchableOpacity>
         </View>
 
+        {/* Group Selection */}
+        {!isGroupExpense && (
+          <View style={styles.inputContainer}>
+            <TouchableOpacity
+              style={styles.groupButton}
+              onPress={() => setShowGroupModal(true)}
+            >
+              <Text style={[styles.groupText, !selectedGroup && styles.placeholderText]}>
+                {selectedGroup ? `Split with ${selectedGroup.name}` : 'Personal Expense (No Group)'}
+              </Text>
+              <Ionicons name="people-outline" size={wp('5%')} color="#9ca3af" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Split Type Selection */}
+        {(selectedGroup || isGroupExpense) && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.sectionLabel}>How to split?</Text>
+            <View style={styles.splitTypeContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.splitTypeButton,
+                  splitType === SPLIT_TYPES.EQUAL && styles.splitTypeButtonSelected
+                ]}
+                onPress={() => setSplitType(SPLIT_TYPES.EQUAL)}
+              >
+                <Text style={[
+                  styles.splitTypeText,
+                  splitType === SPLIT_TYPES.EQUAL && styles.splitTypeTextSelected
+                ]}>
+                  Equally
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.splitTypeButton,
+                  splitType === SPLIT_TYPES.EXACT && styles.splitTypeButtonSelected
+                ]}
+                onPress={() => {
+                  setSplitType(SPLIT_TYPES.EXACT);
+                  setShowSplitModal(true);
+                }}
+              >
+                <Text style={[
+                  styles.splitTypeText,
+                  splitType === SPLIT_TYPES.EXACT && styles.splitTypeTextSelected
+                ]}>
+                  Unequally
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Group Expense Options */}
-        {isGroupExpense && (
+        {(selectedGroup || isGroupExpense) && (
           <>
             {/* Who Paid */}
             <View style={styles.inputContainer}>
               <Text style={styles.sectionLabel}>Who paid?</Text>
               <View style={styles.participantsList}>
-                {Object.entries(group?.memberDetails || {}).map(([memberId, memberInfo]) => (
-                  <TouchableOpacity
-                    key={memberId}
-                    style={[
-                      styles.participantItem,
-                      selectedPayer === memberId && styles.participantItemSelected
-                    ]}
-                    onPress={() => setSelectedPayer(memberId)}
-                  >
-                    <Text style={styles.participantName}>{memberInfo.name}</Text>
-                    {selectedPayer === memberId && (
-                      <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                {Object.entries((selectedGroup || group)?.memberDetails || {}).map(([memberId, memberInfo]) => {
+                  console.log('Member Info:', memberId, memberInfo);
+                  return (
+                    <TouchableOpacity
+                      key={memberId}
+                      style={[
+                        styles.participantItem,
+                        selectedPayer === memberId && styles.participantItemSelected
+                      ]}
+                      onPress={() => setSelectedPayer(memberId)}
+                    >
+                      <Text style={styles.participantName}>{memberInfo?.name || memberInfo?.displayName || 'Unknown Member'}</Text>
+                      {selectedPayer === memberId && (
+                        <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -292,7 +394,7 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
             <View style={styles.inputContainer}>
               <Text style={styles.sectionLabel}>Split between</Text>
               <View style={styles.participantsList}>
-                {Object.entries(group?.memberDetails || {}).map(([memberId, memberInfo]) => (
+                {Object.entries((selectedGroup || group)?.memberDetails || {}).map(([memberId, memberInfo]) => (
                   <TouchableOpacity
                     key={memberId}
                     style={[
@@ -301,13 +403,18 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
                     ]}
                     onPress={() => {
                       if (selectedParticipants.includes(memberId)) {
-                        setSelectedParticipants(selectedParticipants.filter(id => id !== memberId));
+                        const newParticipants = selectedParticipants.filter(id => id !== memberId);
+                        setSelectedParticipants(newParticipants);
+                        // Remove from custom splits if exists
+                        const newCustomSplits = { ...customSplits };
+                        delete newCustomSplits[memberId];
+                        setCustomSplits(newCustomSplits);
                       } else {
                         setSelectedParticipants([...selectedParticipants, memberId]);
                       }
                     }}
                   >
-                    <Text style={styles.participantName}>{memberInfo.name}</Text>
+                    <Text style={styles.participantName}>{memberInfo?.name || memberInfo?.displayName || 'Unknown Member'}</Text>
                     {selectedParticipants.includes(memberId) && (
                       <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
                     )}
@@ -315,6 +422,39 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
                 ))}
               </View>
             </View>
+
+            {/* Custom Split Preview for Unequal */}
+            {splitType === SPLIT_TYPES.EXACT && selectedParticipants.length > 0 && (
+              <View style={styles.inputContainer}>
+                <View style={styles.splitPreviewHeader}>
+                  <Text style={styles.sectionLabel}>Split Details</Text>
+                  <TouchableOpacity
+                    style={styles.editSplitButton}
+                    onPress={() => setShowSplitModal(true)}
+                  >
+                    <Text style={styles.editSplitText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.splitPreviewList}>
+                  {selectedParticipants.map(memberId => {
+                    const memberInfo = (selectedGroup || group)?.memberDetails[memberId];
+                    const splitAmount = customSplits[memberId] || 0;
+                    return (
+                      <View key={memberId} style={styles.splitPreviewItem}>
+                        <Text style={styles.participantName}>{memberInfo?.name || memberInfo?.displayName || 'Unknown Member'}</Text>
+                        <Text style={styles.splitAmount}>${splitAmount.toFixed(2)}</Text>
+                      </View>
+                    );
+                  })}
+                  <View style={styles.splitPreviewTotal}>
+                    <Text style={styles.splitTotalLabel}>Total:</Text>
+                    <Text style={styles.splitTotalAmount}>
+                      ${Object.values(customSplits).reduce((sum, amt) => sum + (amt || 0), 0).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </>
         )}
 
@@ -368,6 +508,183 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
               </TouchableOpacity>
             )}
           />
+        </SafeAreaView>
+      </Modal>
+
+      {/* Group Selection Modal */}
+      <Modal
+        visible={showGroupModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowGroupModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowGroupModal(false)}
+            >
+              <Ionicons name="close" size={wp('6%')} color="#1f2937" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Group</Text>
+            <View style={styles.modalSpacer} />
+          </View>
+
+          <ScrollView style={styles.groupsList}>
+            {/* Personal Expense Option */}
+            <TouchableOpacity
+              style={[
+                styles.groupItem,
+                !selectedGroup && styles.groupItemSelected
+              ]}
+              onPress={() => {
+                setSelectedGroup(null);
+                setSelectedParticipants([user?.uid || '']);
+                setSelectedPayer(user?.uid || '');
+                setSplitType(SPLIT_TYPES.EQUAL);
+                setCustomSplits({});
+                setShowGroupModal(false);
+              }}
+            >
+              <View style={styles.groupItemIcon}>
+                <Ionicons name="person-outline" size={wp('6%')} color="#10b981" />
+              </View>
+              <View style={styles.groupItemInfo}>
+                <Text style={styles.groupItemName}>Personal Expense</Text>
+                <Text style={styles.groupItemDescription}>No group splitting</Text>
+              </View>
+              {!selectedGroup && (
+                <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
+              )}
+            </TouchableOpacity>
+
+            {/* User Groups */}
+            {userGroups.map((group) => (
+              <TouchableOpacity
+                key={group.id}
+                style={[
+                  styles.groupItem,
+                  selectedGroup?.id === group.id && styles.groupItemSelected
+                ]}
+                onPress={() => {
+                  setSelectedGroup(group);
+                  setSelectedParticipants(group.members || []);
+                  setSelectedPayer(user?.uid || '');
+                  setSplitType(SPLIT_TYPES.EQUAL);
+                  setCustomSplits({});
+                  setShowGroupModal(false);
+                }}
+              >
+                <View style={styles.groupItemIcon}>
+                  <Ionicons name="people-outline" size={wp('6%')} color="#10b981" />
+                </View>
+                <View style={styles.groupItemInfo}>
+                  <Text style={styles.groupItemName}>{group.name}</Text>
+                  <Text style={styles.groupItemDescription}>
+                    {group.members?.length || 0} members
+                  </Text>
+                </View>
+                {selectedGroup?.id === group.id && (
+                  <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Custom Split Modal */}
+      <Modal
+        visible={showSplitModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSplitModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowSplitModal(false)}
+            >
+              <Ionicons name="close" size={wp('6%')} color="#1f2937" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Custom Split</Text>
+            <TouchableOpacity
+              style={styles.modalSaveButton}
+              onPress={() => {
+                const totalSplit = Object.values(customSplits).reduce((sum, amt) => sum + (amt || 0), 0);
+                const expenseAmount = parseFloat(amount) || 0;
+                
+                if (Math.abs(totalSplit - expenseAmount) > 0.01) {
+                  Alert.alert('Error', `Split amounts must total $${expenseAmount.toFixed(2)}`);
+                  return;
+                }
+                setShowSplitModal(false);
+              }}
+            >
+              <Text style={styles.modalSaveText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.customSplitContainer}>
+            <Text style={styles.splitInstructions}>
+              Enter the amount each person should pay. Total must equal ${parseFloat(amount || 0).toFixed(2)}
+            </Text>
+            
+            {selectedParticipants.map(memberId => {
+              const memberInfo = (selectedGroup || group)?.memberDetails[memberId];
+              return (
+                <View key={memberId} style={styles.customSplitItem}>
+                  <Text style={styles.customSplitName}>{memberInfo?.name || memberInfo?.displayName || 'Unknown Member'}</Text>
+                  <View style={styles.customSplitInputWrapper}>
+                    <Text style={styles.currencySymbol}>$</Text>
+                    <TextInput
+                      style={styles.customSplitInput}
+                      placeholder="0.00"
+                      value={customSplits[memberId]?.toString() || ''}
+                      onChangeText={(text) => {
+                        const numValue = parseFloat(text) || 0;
+                        setCustomSplits(prev => ({
+                          ...prev,
+                          [memberId]: numValue
+                        }));
+                      }}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              );
+            })}
+
+            <View style={styles.splitSummary}>
+              <View style={styles.splitSummaryRow}>
+                <Text style={styles.splitSummaryLabel}>Total Split:</Text>
+                <Text style={styles.splitSummaryAmount}>
+                  ${Object.values(customSplits).reduce((sum, amt) => sum + (amt || 0), 0).toFixed(2)}
+                </Text>
+              </View>
+              <View style={styles.splitSummaryRow}>
+                <Text style={styles.splitSummaryLabel}>Expense Amount:</Text>
+                <Text style={styles.splitSummaryAmount}>
+                  ${parseFloat(amount || 0).toFixed(2)}
+                </Text>
+              </View>
+              <View style={styles.splitSummaryRow}>
+                <Text style={[
+                  styles.splitSummaryLabel,
+                  styles.splitDifference
+                ]}>
+                  Difference:
+                </Text>
+                <Text style={[
+                  styles.splitSummaryAmount,
+                  styles.splitDifference
+                ]}>
+                  ${(parseFloat(amount || 0) - Object.values(customSplits).reduce((sum, amt) => sum + (amt || 0), 0)).toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
 
@@ -663,6 +980,230 @@ const styles = StyleSheet.create({
   },
   participantName: {
     fontSize: wp('4%'),
+    color: '#000000',
+    fontWeight: '600',
+  },
+  // Group selection styles
+  groupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#e5e7eb',
+    borderRadius: wp('3%'),
+    paddingHorizontal: wp('4%'),
+    height: hp('7%'),
+  },
+  groupText: {
+    fontSize: wp('4.5%'),
     color: '#1f2937',
+  },
+  groupsList: {
+    flex: 1,
+    paddingHorizontal: wp('6%'),
+  },
+  groupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('4%'),
+    marginVertical: hp('0.5%'),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  groupItemSelected: {
+    borderWidth: 2,
+    borderColor: '#10b981',
+    backgroundColor: '#f0fdf4',
+  },
+  groupItemIcon: {
+    width: wp('12%'),
+    height: wp('12%'),
+    backgroundColor: '#f0fdf4',
+    borderRadius: wp('6%'),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: wp('3%'),
+  },
+  groupItemInfo: {
+    flex: 1,
+  },
+  groupItemName: {
+    fontSize: wp('4.5%'),
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: hp('0.5%'),
+  },
+  groupItemDescription: {
+    fontSize: wp('3.5%'),
+    color: '#6b7280',
+  },
+  // Split type styles
+  splitTypeContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('1%'),
+  },
+  splitTypeButton: {
+    flex: 1,
+    paddingVertical: hp('1.5%'),
+    alignItems: 'center',
+    borderRadius: wp('2%'),
+  },
+  splitTypeButtonSelected: {
+    backgroundColor: '#10b981',
+  },
+  splitTypeText: {
+    fontSize: wp('4%'),
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  splitTypeTextSelected: {
+    color: '#ffffff',
+  },
+  // Split preview styles
+  splitPreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp('1%'),
+  },
+  editSplitButton: {
+    paddingHorizontal: wp('3%'),
+    paddingVertical: hp('0.5%'),
+    backgroundColor: '#10b981',
+    borderRadius: wp('2%'),
+  },
+  editSplitText: {
+    fontSize: wp('3.5%'),
+    color: '#ffffff',
+    fontWeight: '500',
+  },
+  splitPreviewList: {
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('3%'),
+  },
+  splitPreviewItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: hp('1%'),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  splitAmount: {
+    fontSize: wp('4%'),
+    fontWeight: '500',
+    color: '#1f2937',
+  },
+  splitPreviewTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: hp('1%'),
+    marginTop: hp('1%'),
+    borderTopWidth: 2,
+    borderTopColor: '#e5e7eb',
+  },
+  splitTotalLabel: {
+    fontSize: wp('4%'),
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  splitTotalAmount: {
+    fontSize: wp('4%'),
+    fontWeight: '600',
+    color: '#10b981',
+  },
+  // Custom split modal styles
+  modalSaveButton: {
+    paddingHorizontal: wp('4%'),
+    paddingVertical: hp('1%'),
+  },
+  modalSaveText: {
+    fontSize: wp('4%'),
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  customSplitContainer: {
+    flex: 1,
+    paddingHorizontal: wp('6%'),
+  },
+  splitInstructions: {
+    fontSize: wp('3.5%'),
+    color: '#6b7280',
+    textAlign: 'center',
+    marginVertical: hp('2%'),
+    paddingHorizontal: wp('4%'),
+  },
+  customSplitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('4%'),
+    marginVertical: hp('0.5%'),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  customSplitName: {
+    fontSize: wp('4%'),
+    fontWeight: '600',
+    color: '#000000',
+    flex: 1,
+  },
+  customSplitInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: wp('2%'),
+    paddingHorizontal: wp('3%'),
+    width: wp('25%'),
+  },
+  customSplitInput: {
+    flex: 1,
+    fontSize: wp('4%'),
+    color: '#1f2937',
+    paddingVertical: hp('1%'),
+    textAlign: 'right',
+  },
+  splitSummary: {
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('4%'),
+    marginTop: hp('2%'),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  splitSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: hp('0.5%'),
+  },
+  splitSummaryLabel: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+  },
+  splitSummaryAmount: {
+    fontSize: wp('4%'),
+    fontWeight: '500',
+    color: '#1f2937',
+  },
+  splitDifference: {
+    fontWeight: '600',
+    color: '#ef4444',
   },
 });
