@@ -29,6 +29,7 @@ function TabNavigator({ user }) {
   const GroupsWrapper = (props) => <GroupsScreen {...props} user={user} />;
   const ActivityWrapper = (props) => <ActivityScreen {...props} user={user} />;
   const ProfileWrapper = (props) => <ProfileScreen {...props} user={user} />;
+  const ExpenseWrapper = (props) => <ExpenseScreen {...props} user={user} />;
 
   return (
     <Tab.Navigator
@@ -75,6 +76,15 @@ function TabNavigator({ user }) {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Expenses"
+        component={ExpenseWrapper}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="add-circle-outline" size={size + 4} color={color} />
           ),
         }}
       />

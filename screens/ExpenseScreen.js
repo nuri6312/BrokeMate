@@ -1,73 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Modal,
-  TextInput,
-  Alert,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import { getUserExpenses } from '../services/databaseService';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function ExpenseScreen({ user }) {
+export default function ExpenseScreen({ user, navigation }) {
   const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newExpense, setNewExpense] = useState({
-    amount: '',
-    description: '',
-    category: 'Food',
-    date: '',
-    groupName: '',
-    splitType: 'Split equally',
-  });
+  useEffect(() => {
+    loadExpenses();
+  }, [user]);
 
-  const categories = ['Food', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Other'];
+  // Refresh expenses when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadExpenses();
+    }, [user])
+  );
 
-  const handleAddExpense = () => {
-    if (!newExpense.amount || !newExpense.description) {
-      Alert.alert('Error', 'Please fill in amount and description');
+  const loadExpenses = async () => {
+    if (!user?.uid) {
+      console.log('No user ID found');
       return;
     }
+    
+    try {
+      setLoading(true);
+      console.log('Loading expenses for user:', user.uid);
+      const result = await getUserExpenses(user.uid);
+      
+      if (result.success) {
+        console.log('Loaded expenses:', result.data.length);
+        setExpenses(result.data);
+      } else {
+        console.error('Failed to load expenses:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const expense = {
-      id: Date.now().toString(),
-      amount: newExpense.amount.startsWith('$') ? newExpense.amount : `$${newExpense.amount}`,
-      description: newExpense.description,
-      category: newExpense.category,
-      date: newExpense.date || new Date().toISOString().split('T')[0],
-      groupName: newExpense.groupName,
-      splitType: newExpense.splitType,
-    };
-
-    setExpenses([expense, ...expenses]);
-    setNewExpense({
-      amount: '',
-      description: '',
-      category: 'Food',
-      date: '',
-      groupName: '',
-      splitType: '',
+  const formatDate = (date) => {
+    if (!date) return '';
+    
+    const dateObj = date.toDate ? date.toDate() : new Date(date);
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
-    setModalVisible(false);
+  };
+
+  const formatAmount = (amount) => {
+    return `$${parseFloat(amount).toFixed(2)}`;
+  };
+
+  const getCategoryIcon = (categoryId) => {
+    const categoryMap = {
+      food: 'restaurant-outline',
+      transport: 'car-outline',
+      entertainment: 'film-outline',
+      shopping: 'bag-outline',
+      health: 'medical-outline',
+      education: 'school-outline',
+      travel: 'airplane-outline',
+      work: 'briefcase-outline',
+      social: 'people-outline',
+      financial: 'card-outline',
+      housing: 'home-outline',
+      misc: 'ellipsis-horizontal-outline'
+    };
+    return categoryMap[categoryId] || 'ellipsis-horizontal-outline';
   };
 
   const renderExpenseItem = ({ item }) => (
-    <View style={styles.expenseItem}>
+    <TouchableOpacity 
+      style={styles.expenseItem}
+      onPress={() => navigation?.navigate('ExpenseDetails', { expense: item })}
+    >
       <View style={styles.expenseHeader}>
-        <Text style={styles.expenseAmount}>{item.amount}</Text>
-        <Text style={styles.expenseDate}>{item.date}</Text>
+        <View style={styles.expenseLeft}>
+          <View style={styles.categoryIcon}>
+            <Ionicons 
+              name={getCategoryIcon(item.category)} 
+              size={wp('5%')} 
+              color="#3b82f6" 
+            />
+          </View>
+          <View style={styles.expenseInfo}>
+            <Text style={styles.expenseTitle}>{item.title}</Text>
+            <Text style={styles.expenseDescription}>{item.description}</Text>
+          </View>
+        </View>
+        <View style={styles.expenseRight}>
+          <Text style={styles.expenseAmount}>{formatAmount(item.amount)}</Text>
+          <Text style={styles.expenseDate}>{formatDate(item.date)}</Text>
+        </View>
       </View>
-      <Text style={styles.expenseDescription}>{item.description}</Text>
-      <View style={styles.expenseFooter}>
-        <Text style={styles.expenseCategory}>{item.category}</Text>
-        <Text style={styles.expenseGroup}>{item.groupName}</Text>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -75,145 +118,45 @@ export default function ExpenseScreen({ user }) {
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
 
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Expenses</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>Expenses</Text>
+        <Text style={styles.subtitle}>Track your personal spending</Text>
       </View>
 
       <View style={styles.content}>
-        <FlatList
-          data={expenses}
-          renderItem={renderExpenseItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading expenses...</Text>
+          </View>
+        ) : expenses.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={wp('20%')} color="#9ca3af" />
+            <Text style={styles.emptyTitle}>No expenses yet</Text>
+            <Text style={styles.emptySubtitle}>Use the + button to add your first expense</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={expenses}
+            renderItem={renderExpenseItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            onRefresh={loadExpenses}
+            refreshing={loading}
+          />
+        )}
       </View>
 
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation?.navigate('AddExpense', { userId: user?.uid })}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Add Expense</Text>
-              <View style={{ width: 24 }} />
-            </View>
+        <Ionicons name="add" size={wp('7%')} color="#ffffff" />
+      </TouchableOpacity>
 
 
-            <View style={styles.formContainer}>
 
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Amount"
-                  placeholderTextColor="#9ca3af"
-                  value={newExpense.amount}
-                  onChangeText={(text) => setNewExpense({ ...newExpense, amount: text })}
-                  keyboardType="numeric"
-                />
-                <Text style={styles.currencySymbol}>$</Text>
-              </View>
-
-
-              <TextInput
-                style={styles.textInput}
-                placeholder="Description"
-                placeholderTextColor="#9ca3af"
-                value={newExpense.description}
-                onChangeText={(text) => setNewExpense({ ...newExpense, description: text })}
-              />
-
-
-              <View style={styles.categoryContainer}>
-                <Text style={styles.sectionTitle}>Category</Text>
-                <View style={styles.categorySelector}>
-                  <Text style={styles.selectedCategory}>{newExpense.category}</Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
-                </View>
-              </View>
-
-
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Date"
-                  placeholderTextColor="#9ca3af"
-                  value={newExpense.date}
-                  onChangeText={(text) => setNewExpense({ ...newExpense, date: text })}
-                />
-                <Text style={styles.dateIcon}>📅</Text>
-              </View>
-
-
-              <View style={styles.splitSection}>
-                <Text style={styles.sectionTitle}>Split with</Text>
-                <View style={styles.groupInfo}>
-                  <View style={styles.groupAvatar}>
-                    <Text style={styles.avatarText}>G</Text>
-                  </View>
-                  <View style={styles.groupDetails}>
-                    <Text style={styles.groupName}>{newExpense.groupName}</Text>
-                    <Text style={styles.splitTypeText}>{newExpense.splitType}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.splitButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.splitButton,
-                      newExpense.splitType === 'Split unequally' && styles.splitButtonActive
-                    ]}
-                    onPress={() => setNewExpense({ ...newExpense, splitType: 'Split unequally' })}
-                  >
-                    <Text style={[
-                      styles.splitButtonText,
-                      newExpense.splitType === 'Split unequally' && styles.splitButtonTextActive
-                    ]}>
-                      Split Unequally
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.splitButton,
-                      newExpense.splitType === 'Split equally' && styles.splitButtonActive
-                    ]}
-                    onPress={() => setNewExpense({ ...newExpense, splitType: 'Split equally' })}
-                  >
-                    <Text style={[
-                      styles.splitButtonText,
-                      newExpense.splitType === 'Split equally' && styles.splitButtonTextActive
-                    ]}>
-                      Split Equally
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-
-              <TouchableOpacity style={styles.saveButton} onPress={handleAddExpense}>
-                <Text style={styles.saveButtonText}>Save Expense</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -225,47 +168,30 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? hp('5.5%') : StatusBar.currentHeight || 0,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: wp('6%'),
-    paddingTop: Platform.OS === 'ios' ? hp('2.5%') : hp('2%'),
-    paddingBottom: hp('2%'),
+    paddingVertical: hp('2%'),
     backgroundColor: '#ffffff',
-    borderBottomWidth: Platform.OS === 'ios' ? 0.5 : 1,
+    borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  titleContainer: {
-    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   title: {
-    fontSize: Platform.OS === 'ios' ? wp('8.5%') : wp('7%'),
-    fontWeight: Platform.OS === 'ios' ? '700' : '600',
+    fontSize: wp('8.5%'),
+    fontWeight: '700',
     color: '#1f2937',
-    letterSpacing: Platform.OS === 'ios' ? -0.5 : 0,
+    marginBottom: hp('0.5%'),
+    letterSpacing: -0.5,
   },
-  addButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: wp('4%'),
-    paddingVertical: hp('1%'),
-    borderRadius: 8,
+  subtitle: {
+    fontSize: wp('4.3%'),
+    color: '#6b7280',
+    lineHeight: hp('2.8%'),
   },
-  addButtonText: {
-    color: '#ffffff',
-    fontSize: wp('4%'),
-    fontWeight: '500',
-  },
+
   content: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -292,193 +218,95 @@ const styles = StyleSheet.create({
   },
   expenseHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: hp('1%'),
   },
-  expenseAmount: {
-    fontSize: Platform.OS === 'ios' ? wp('5.5%') : wp('5%'),
-    fontWeight: Platform.OS === 'ios' ? '700' : '600',
-    color: '#1f2937',
-  },
-  expenseDate: {
-    fontSize: Platform.OS === 'ios' ? wp('3.8%') : wp('3.5%'),
-    color: '#6b7280',
-  },
-  expenseDescription: {
-    fontSize: Platform.OS === 'ios' ? wp('4.3%') : wp('4%'),
-    color: '#374151',
-    marginBottom: hp('1%'),
-    lineHeight: Platform.OS === 'ios' ? hp('2.8%') : hp('2.5%'),
-  },
-  expenseFooter: {
+  expenseLeft: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  expenseCategory: {
-    fontSize: Platform.OS === 'ios' ? wp('3.8%') : wp('3.5%'),
-    color: '#6366f1',
-    fontWeight: '500',
-  },
-  expenseGroup: {
-    fontSize: Platform.OS === 'ios' ? wp('3.8%') : wp('3.5%'),
-    color: '#6b7280',
-  },
-  modalOverlay: {
+    alignItems: 'center',
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: hp('90%'),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  categoryIcon: {
+    width: wp('10%'),
+    height: wp('10%'),
+    borderRadius: wp('5%'),
+    backgroundColor: '#f0f9ff',
     alignItems: 'center',
-    paddingHorizontal: wp('5%'),
-    paddingVertical: hp('2%'),
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  closeButton: {
-    padding: wp('2%'),
-  },
-  closeButtonText: {
-    fontSize: wp('5%'),
-    color: '#64748b',
-  },
-  modalTitle: {
-    fontSize: wp('5%'),
-    fontWeight: '600',
-    color: '#000000',
-  },
-  formContainer: {
-    padding: wp('5%'),
-  },
-  inputContainer: {
-    position: 'relative',
-    marginBottom: hp('2%'),
-  },
-  textInput: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: wp('4%'),
-    paddingVertical: hp('1.5%'),
-    borderRadius: 8,
-    fontSize: wp('4%'),
-    color: '#000000',
-  },
-  currencySymbol: {
-    position: 'absolute',
-    right: wp('4%'),
-    top: hp('1.5%'),
-    fontSize: wp('4%'),
-    color: '#64748b',
-  },
-  dateIcon: {
-    position: 'absolute',
-    right: wp('4%'),
-    top: hp('1.2%'),
-    fontSize: wp('4%'),
-  },
-  categoryContainer: {
-    marginBottom: hp('2%'),
-  },
-  sectionTitle: {
-    fontSize: wp('4%'),
-    fontWeight: '500',
-    color: '#000000',
-    marginBottom: hp('1%'),
-  },
-  categorySelector: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: wp('4%'),
-    paddingVertical: hp('1.5%'),
-    borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  selectedCategory: {
-    fontSize: wp('4%'),
-    color: '#000000',
-  },
-  dropdownArrow: {
-    fontSize: wp('3%'),
-    color: '#64748b',
-  },
-  splitSection: {
-    marginBottom: hp('3%'),
-  },
-  groupInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: hp('2%'),
-  },
-  groupAvatar: {
-    width: wp('12%'),
-    height: wp('12%'),
-    borderRadius: wp('6%'),
-    backgroundColor: '#e2e8f0',
     justifyContent: 'center',
-    alignItems: 'center',
     marginRight: wp('3%'),
   },
-  avatarText: {
-    fontSize: wp('5%'),
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  groupDetails: {
+  expenseInfo: {
     flex: 1,
   },
-  groupName: {
-    fontSize: wp('4%'),
-    fontWeight: '500',
-    color: '#000000',
-  },
-  splitTypeText: {
-    fontSize: wp('3.5%'),
-    color: '#64748b',
-  },
-  splitButtons: {
-    flexDirection: 'row',
-    gap: wp('3%'),
-  },
-  splitButton: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    paddingVertical: hp('1.5%'),
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  splitButtonActive: {
-    backgroundColor: '#dbeafe',
-    borderColor: '#3b82f6',
-  },
-  splitButtonText: {
-    fontSize: wp('3.5%'),
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  splitButtonTextActive: {
-    color: '#3b82f6',
-  },
-  saveButton: {
-    backgroundColor: '#93c5fd',
-    paddingVertical: hp('2%'),
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: hp('2%'),
-  },
-  saveButtonText: {
+  expenseTitle: {
     fontSize: wp('4.5%'),
     fontWeight: '600',
-    color: '#1e40af',
+    color: '#1f2937',
+    marginBottom: hp('0.3%'),
   },
+  expenseDescription: {
+    fontSize: wp('3.8%'),
+    color: '#6b7280',
+    lineHeight: wp('5%'),
+  },
+  expenseRight: {
+    alignItems: 'flex-end',
+  },
+  expenseAmount: {
+    fontSize: wp('4.5%'),
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: hp('0.3%'),
+  },
+  expenseDate: {
+    fontSize: wp('3.5%'),
+    color: '#6b7280',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: hp('20%'),
+  },
+  loadingText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+    marginTop: hp('2%'),
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: hp('15%'),
+    paddingHorizontal: wp('10%'),
+  },
+  emptyTitle: {
+    fontSize: wp('6%'),
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: hp('3%'),
+    marginBottom: hp('1%'),
+  },
+  emptySubtitle: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: wp('6%'),
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: hp('3%'),
+    right: wp('6%'),
+    width: wp('14%'),
+    height: wp('14%'),
+    backgroundColor: '#3b82f6',
+    borderRadius: wp('7%'),
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
 });

@@ -7,20 +7,21 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
-  Image,
   Modal,
   FlatList,
   Platform,
+  Alert,
 } from 'react-native';
 import {
   SafeAreaView,
 } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
+import { addPersonalExpense } from '../services/databaseService';
 
 const categories = [
   { id: 'housing', name: 'Housing & Utilities', icon: 'home-outline', color: '#10b981' },
@@ -42,12 +43,12 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
   const isEditing = route?.params?.isEditing || false;
   const existingData = route?.params?.expenseData || {};
 
+  const [title, setTitle] = useState(existingData.title || '');
   const [amount, setAmount] = useState(existingData.amount || '');
   const [description, setDescription] = useState(existingData.description || '');
   const [selectedCategory, setSelectedCategory] = useState(existingData.category || null);
   const [selectedDate, setSelectedDate] = useState(existingData.date || new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [splitType, setSplitType] = useState(existingData.splitType || 'equally');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const handleDateChange = (event, date) => {
@@ -68,21 +69,63 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
     return date.toLocaleDateString('en-US', options);
   };
 
-  const handleSaveExpense = () => {
+  const handleSaveExpense = async () => {
+    // Validation
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter an expense title');
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    if (!selectedCategory) {
+      Alert.alert('Error', 'Please select a category');
+      return;
+    }
+
     const expenseData = {
-      amount,
-      description,
+      title: title.trim(),
+      amount: amount,
+      description: description.trim(),
       category: selectedCategory,
       date: selectedDate,
-      splitType
     };
 
     if (isEditing) {
       // TODO: Implement update expense logic
       console.log('Updating expense:', expenseData);
+      Alert.alert('Success', 'Expense updated successfully');
     } else {
-      // TODO: Implement create expense logic
-      console.log('Creating expense:', expenseData);
+      try {
+        // Get user from route params or props
+        const userId = user?.uid || route?.params?.userId;
+        console.log('User ID:', userId);
+        console.log('User object:', user);
+        console.log('Route params:', route?.params);
+
+        if (!userId) {
+          Alert.alert('Error', 'User not found. Please try again.');
+          return;
+        }
+
+        console.log('Calling addPersonalExpense with:', expenseData, userId);
+        const result = await addPersonalExpense(expenseData, userId);
+        console.log('Result from addPersonalExpense:', result);
+
+        if (result.success) {
+          Alert.alert('Success', 'Expense saved successfully');
+        } else {
+          Alert.alert('Error', result.error || 'Failed to save expense');
+          return;
+        }
+      } catch (error) {
+        console.error('Error saving expense:', error);
+        Alert.alert('Error', 'Failed to save expense. Please try again.');
+        return;
+      }
     }
 
     // Navigate back to previous screen
@@ -121,6 +164,17 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Title Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.titleInput}
+            placeholder="Expense Title"
+            placeholderTextColor="#9ca3af"
+            value={title}
+            onChangeText={setTitle}
+          />
+        </View>
+
         {/* Amount Input */}
         <View style={styles.inputContainer}>
           <View style={styles.amountInputWrapper}>
@@ -182,60 +236,6 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
             </Text>
             <Ionicons name="calendar-outline" size={wp('5%')} color="#9ca3af" />
           </TouchableOpacity>
-        </View>
-
-        {/* Split With Section */}
-        <View style={styles.splitSection}>
-          <Text style={styles.splitTitle}>Split with</Text>
-
-          {/* Group Member */}
-          <View style={styles.groupMember}>
-            <View style={styles.memberAvatar}>
-              <Image
-                source={{ uri: 'https://via.placeholder.com/40x40/10b981/ffffff?text=U' }}
-                style={styles.avatarImage}
-              />
-            </View>
-            <View style={styles.memberInfo}>
-              <Text style={styles.memberName}>Group Name</Text>
-              <Text style={styles.memberSubtext}>Split equally</Text>
-            </View>
-          </View>
-
-          {/* Split Options */}
-          <View style={styles.splitOptions}>
-            <TouchableOpacity
-              style={[
-                styles.splitOption,
-                splitType === 'unequally' && styles.splitOptionActive
-              ]}
-              onPress={() => setSplitType('unequally')}
-            >
-              <Text style={[
-                styles.splitOptionText,
-                splitType === 'unequally' && styles.splitOptionTextActive
-              ]}>
-                Split Unequally
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.splitOption,
-                styles.splitOptionPrimary,
-                splitType === 'equally' && styles.splitOptionActive
-              ]}
-              onPress={() => setSplitType('equally')}
-            >
-              <Text style={[
-                styles.splitOptionText,
-                styles.splitOptionTextPrimary,
-                splitType === 'equally' && styles.splitOptionTextActive
-              ]}>
-                Split Equally
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Save Button */}
@@ -390,6 +390,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6b7280',
   },
+  titleInput: {
+    backgroundColor: '#e5e7eb',
+    borderRadius: wp('3%'),
+    paddingHorizontal: wp('4%'),
+    paddingVertical: hp('2%'),
+    fontSize: wp('4.5%'),
+    color: '#1f2937',
+    height: hp('7%'),
+  },
   descriptionInput: {
     backgroundColor: '#e5e7eb',
     borderRadius: wp('3%'),
@@ -441,76 +450,6 @@ const styles = StyleSheet.create({
     fontSize: wp('4.5%'),
     color: '#1f2937',
     paddingVertical: hp('1.5%'),
-  },
-  splitSection: {
-    marginTop: hp('2%'),
-    marginBottom: hp('3%'),
-  },
-  splitTitle: {
-    fontSize: wp('4.5%'),
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: hp('2%'),
-  },
-  groupMember: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: hp('2%'),
-  },
-  memberAvatar: {
-    width: wp('12%'),
-    height: wp('12%'),
-    borderRadius: wp('6%'),
-    marginRight: wp('3%'),
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: wp('6%'),
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: wp('4.2%'),
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: hp('0.3%'),
-  },
-  memberSubtext: {
-    fontSize: wp('3.8%'),
-    color: '#6b7280',
-  },
-  splitOptions: {
-    flexDirection: 'row',
-    gap: wp('3%'),
-  },
-  splitOption: {
-    flex: 1,
-    paddingVertical: hp('1.5%'),
-    paddingHorizontal: wp('4%'),
-    borderRadius: wp('6%'),
-    backgroundColor: '#e5e7eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  splitOptionPrimary: {
-    backgroundColor: '#bfdbfe',
-  },
-  splitOptionActive: {
-    backgroundColor: '#3b82f6',
-  },
-  splitOptionText: {
-    fontSize: wp('4%'),
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  splitOptionTextPrimary: {
-    color: '#3b82f6',
-  },
-  splitOptionTextActive: {
-    color: '#ffffff',
   },
   saveButton: {
     backgroundColor: '#bfdbfe',

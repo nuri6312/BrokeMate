@@ -102,19 +102,7 @@ export default function DashboardScreen({ user, navigation }) {
             <Text style={styles.groupStatusOwed}>You're owed</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Add some bottom padding for the floating button */}
-        <View style={styles.bottomPadding} />
       </ScrollView>
-
-      {/* Floating Add Expense Button */}
-      <TouchableOpacity 
-        style={styles.floatingButton}
-        onPress={() => navigation.navigate('AddExpense')}
-      >
-        <Ionicons name="add" size={wp('6%')} color="#ffffff" style={styles.floatingButtonIcon} />
-        <Text style={styles.floatingButtonText}>Add Expense</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -288,36 +276,5 @@ const styles = StyleSheet.create({
     fontSize: wp('3.5%'),
     color: '#10b981',
     fontWeight: '500',
-  },
-  bottomPadding: {
-    height: hp('10%'),
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: hp('2%'),
-    right: wp('2%'),
-    backgroundColor: '#3b82f6',
-    borderRadius: wp('8%'),
-    paddingVertical: hp('1.5%'),
-    paddingHorizontal: wp('4%'),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  floatingButtonIcon: {
-    fontSize: wp('6%'),
-    color: '#ffffff',
-    marginRight: wp('2%'),
-    fontWeight: 'bold',
-  },
-  floatingButtonText: {
-    fontSize: wp('4.5%'),
-    color: '#ffffff',
-    fontWeight: '600',
   },
 });
