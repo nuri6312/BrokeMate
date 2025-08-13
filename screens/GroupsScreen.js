@@ -1,63 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, StatusBar, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { Ionicons } from '@expo/vector-icons';
+import { listenToUserGroups } from '../services/groupService';
 
 export default function GroupsScreen({ user, navigation }) {
-  const [groups] = useState([
-    {
-      id: '1',
-      name: 'Dorm 2024',
-      balance: 25,
-      status: 'owe',
-      image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400&h=300&fit=crop',
-    },
-    {
-      id: '2',
-      name: 'Trip to Tahoe',
-      balance: 150,
-      status: 'owed',
-      image: 'https://images.unsplash.com/photo-1544737151-6e4b9d1b5d4a?w=400&h=300&fit=crop',
-    },
-    {
-      id: '3',
-      name: 'Roommates',
-      balance: 30,
-      status: 'owe',
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop',
-    },
-    {
-      id: '4',
-      name: 'Ski Trip',
-      balance: 75,
-      status: 'owed',
-      image: 'https://images.unsplash.com/photo-1551524164-6cf2ac531400?w=400&h=300&fit=crop',
-    },
-  ]);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const renderGroupItem = (group) => (
-    <TouchableOpacity
-      key={group.id}
-      style={styles.groupItem}
-      onPress={() => navigation.navigate('GroupDetails', { group })}
-    >
-      <View style={styles.groupContent}>
-        <View style={styles.groupInfo}>
-          <Text style={styles.groupName}>{group.name}</Text>
-          <Text style={[
-            styles.groupBalance,
-            group.status === 'owe' ? styles.balanceOwe : styles.balanceOwed
-          ]}>
-            {group.status === 'owe' ? 'You owe' : 'You are owed'} ${group.balance}
-          </Text>
+  useEffect(() => {
+    // Set up real-time listener for groups
+    const unsubscribe = listenToUserGroups((groupsData) => {
+      setGroups(groupsData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const renderGroupItem = (group) => {
+    const balance = group.userBalance || 0;
+    const isOwed = balance > 0;
+    const owes = balance < 0;
+    
+    return (
+      <TouchableOpacity
+        key={group.id}
+        style={styles.groupItem}
+        onPress={() => navigation.navigate('GroupDetails', { group })}
+      >
+        <View style={styles.groupContent}>
+          <View style={styles.groupInfo}>
+            <Text style={styles.groupName}>{group.name}</Text>
+            {balance === 0 ? (
+              <Text style={styles.groupBalanceSettled}>All settled up</Text>
+            ) : (
+              <Text style={[
+                styles.groupBalance,
+                owes ? styles.balanceOwe : styles.balanceOwed
+              ]}>
+                {owes ? 'You owe' : 'You are owed'} ${Math.abs(balance).toFixed(2)}
+              </Text>
+            )}
+          </View>
+          <View style={styles.groupImageContainer}>
+            <Image 
+              source={{ 
+                uri: group.imageURL || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400&h=300&fit=crop'
+              }} 
+              style={styles.groupImage} 
+            />
+          </View>
         </View>
-        <View style={styles.groupImageContainer}>
-          <Image source={{ uri: group.image }} style={styles.groupImage} />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -73,13 +71,24 @@ export default function GroupsScreen({ user, navigation }) {
         </TouchableOpacity>
       </View>
       
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {groups.map(renderGroupItem)}
-      </ScrollView>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading groups...</Text>
+        </View>
+      ) : groups.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No groups yet</Text>
+          <Text style={styles.emptySubtext}>Create your first group to get started!</Text>
+        </View>
+      ) : (
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {groups.map(renderGroupItem)}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -154,6 +163,11 @@ const styles = StyleSheet.create({
   balanceOwed: {
     color: '#10b981',
   },
+  groupBalanceSettled: {
+    color: '#6b7280',
+    fontSize: wp('4%'),
+    fontWeight: '500',
+  },
   groupImageContainer: {
     width: wp('20%'),
     height: wp('15%'),
@@ -164,5 +178,33 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: hp('10%'),
+  },
+  loadingText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp('6%'),
+    paddingVertical: hp('10%'),
+  },
+  emptyText: {
+    fontSize: wp('5%'),
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: hp('1%'),
+  },
+  emptySubtext: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+    textAlign: 'center',
   },
 });

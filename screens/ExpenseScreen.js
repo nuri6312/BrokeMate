@@ -10,52 +10,27 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-import { getUserExpenses } from '../services/databaseService';
+import { listenToUserExpenses } from '../services/expenseService';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+
 
 export default function ExpenseScreen({ user, navigation }) {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadExpenses();
-  }, [user]);
-
-  // Refresh expenses when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      loadExpenses();
-    }, [user])
-  );
-
-  const loadExpenses = async () => {
-    if (!user?.uid) {
-      console.log('No user ID found');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      console.log('Loading expenses for user:', user.uid);
-      const result = await getUserExpenses(user.uid);
-      
-      if (result.success) {
-        console.log('Loaded expenses:', result.data.length);
-        setExpenses(result.data);
-      } else {
-        console.error('Failed to load expenses:', result.error);
-      }
-    } catch (error) {
-      console.error('Error loading expenses:', error);
-    } finally {
+    // Set up real-time listener for user expenses
+    const unsubscribe = listenToUserExpenses((expensesData) => {
+      setExpenses(expensesData);
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const formatDate = (date) => {
     if (!date) return '';
-    
+
     const dateObj = date.toDate ? date.toDate() : new Date(date);
     return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -87,17 +62,17 @@ export default function ExpenseScreen({ user, navigation }) {
   };
 
   const renderExpenseItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.expenseItem}
       onPress={() => navigation?.navigate('ExpenseDetails', { expense: item })}
     >
       <View style={styles.expenseHeader}>
         <View style={styles.expenseLeft}>
           <View style={styles.categoryIcon}>
-            <Ionicons 
-              name={getCategoryIcon(item.category)} 
-              size={wp('5%')} 
-              color="#3b82f6" 
+            <Ionicons
+              name={getCategoryIcon(item.category)}
+              size={wp('5%')}
+              color="#3b82f6"
             />
           </View>
           <View style={styles.expenseInfo}>
@@ -141,8 +116,7 @@ export default function ExpenseScreen({ user, navigation }) {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
-            onRefresh={loadExpenses}
-            refreshing={loading}
+            refreshing={false}
           />
         )}
       </View>
@@ -154,9 +128,6 @@ export default function ExpenseScreen({ user, navigation }) {
       >
         <Ionicons name="add" size={wp('7%')} color="#ffffff" />
       </TouchableOpacity>
-
-
-
     </View>
   );
 }
@@ -308,5 +279,4 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-
 });

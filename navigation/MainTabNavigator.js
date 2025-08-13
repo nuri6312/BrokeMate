@@ -16,9 +16,11 @@ import ExpenseScreen from '../screens/ExpenseScreen';
 import NewGroupScreen from '../screens/NewGroupScreen';
 import AddMembersScreen from '../screens/AddMembersScreen';
 import GroupDetailsScreen from '../screens/GroupDetailsScreen';
+import GroupSettingsScreen from '../screens/GroupSettingsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import SettleBalancesScreen from '../screens/SettleBalancesScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -192,6 +194,20 @@ export default function MainTabNavigator({ user }) {
           <Stack.Screen
             name="EditProfile"
             component={EditProfileScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="GroupSettings"
+            component={GroupSettingsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="SettleBalances"
+            component={SettleBalancesScreen}
             options={{
               headerShown: false,
             }}

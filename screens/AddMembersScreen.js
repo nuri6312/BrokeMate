@@ -8,41 +8,39 @@ import {
   TextInput,
   ScrollView,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { Ionicons } from '@expo/vector-icons';
+import { searchUsersByEmail, addMemberToGroup } from '../services/groupService';
 
-export default function AddMembersScreen({ navigation }) {
+export default function AddMembersScreen({ navigation, route }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const groupId = route.params?.groupId;
 
-  const suggestedMembers = [
-    {
-      id: '1',
-      name: 'Jennifer Smith',
-      username: '@jennifer.smith',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=100&h=100&fit=crop&crop=face',
-    },
-    {
-      id: '2',
-      name: 'Alex Williams',
-      username: '@alex.williams',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    },
-    {
-      id: '3',
-      name: 'Emily Davis',
-      username: '@emily.davis',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-    },
-    {
-      id: '4',
-      name: 'Ryan Clark',
-      username: '@ryan.clark',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-    },
-  ];
+  const handleSearch = async (query) => {
+    setSearchQuery(query);
+    
+    // Only search when user types a complete email (contains @)
+    if (query.includes('@') && query.length >= 5) {
+      setLoading(true);
+      const result = await searchUsersByEmail(query);
+      
+      if (result.success) {
+        setSearchResults(result.data);
+      } else {
+        console.error('Error searching users:', result.error);
+        setSearchResults([]);
+      }
+      setLoading(false);
+    } else {
+      setSearchResults([]);
+    }
+  };
 
   const toggleMemberSelection = (member) => {
     const isSelected = selectedMembers.find(m => m.id === member.id);
@@ -53,9 +51,35 @@ export default function AddMembersScreen({ navigation }) {
     }
   };
 
-  const handleAddMembers = () => {
-    // Handle adding members logic here
-    navigation.goBack();
+  const handleAddMembers = async () => {
+    if (selectedMembers.length === 0) return;
+    
+    try {
+      setLoading(true);
+      
+      if (!groupId) {
+        Alert.alert('Error', 'Group ID not found');
+        return;
+      }
+
+      // Add each selected member
+      for (const member of selectedMembers) {
+        const result = await addMemberToGroup(groupId, member.email);
+        if (!result.success) {
+          Alert.alert('Error', `Failed to add ${member.name}: ${result.error}`);
+          return;
+        }
+      }
+
+      Alert.alert('Success', 'Members added successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      console.error('Error adding members:', error);
+      Alert.alert('Error', 'Failed to add members');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,43 +102,59 @@ export default function AddMembersScreen({ navigation }) {
           <Ionicons name="search" size={wp('5%')} color="#9ca3af" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by email or username"
+            placeholder="Enter exact email address"
             placeholderTextColor="#9ca3af"
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={handleSearch}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
 
         <ScrollView style={styles.membersContainer} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>Suggested</Text>
-          
-          {suggestedMembers.map((member) => {
-            const isSelected = selectedMembers.find(m => m.id === member.id);
-            return (
-              <TouchableOpacity
-                key={member.id}
-                style={[styles.memberItem, isSelected && styles.memberItemSelected]}
-                onPress={() => toggleMemberSelection(member)}
-              >
-                <Image source={{ uri: member.avatar }} style={styles.memberAvatar} />
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>{member.name}</Text>
-                  <Text style={styles.memberUsername}>{member.username}</Text>
-                </View>
-                {isSelected && (
-                  <Ionicons name="checkmark-circle" size={wp('6%')} color="#10b981" />
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          {loading ? (
+            <Text style={styles.loadingText}>Searching...</Text>
+          ) : searchResults.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Search Results</Text>
+              {searchResults.map((user) => {
+                const isSelected = selectedMembers.find(m => m.id === user.id);
+                return (
+                  <TouchableOpacity
+                    key={user.id}
+                    style={[styles.memberItem, isSelected && styles.memberItemSelected]}
+                    onPress={() => toggleMemberSelection(user)}
+                  >
+                    <View style={styles.memberAvatar}>
+                      <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>{user.name}</Text>
+                      <Text style={styles.memberUsername}>{user.email}</Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={wp('6%')} color="#10b981" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          ) : searchQuery.includes('@') && searchQuery.length >= 5 ? (
+            <Text style={styles.noResultsText}>No user found with this email address</Text>
+          ) : (
+            <Text style={styles.searchHintText}>Enter the complete email address of the person you want to add</Text>
+          )}
         </ScrollView>
 
         <TouchableOpacity 
-          style={[styles.addButton, selectedMembers.length === 0 && styles.addButtonDisabled]}
+          style={[styles.addButton, (selectedMembers.length === 0 || loading) && styles.addButtonDisabled]}
           onPress={handleAddMembers}
-          disabled={selectedMembers.length === 0}
+          disabled={selectedMembers.length === 0 || loading}
         >
-          <Text style={styles.addButtonText}>Add Members</Text>
+          <Text style={styles.addButtonText}>
+            {loading ? 'Adding...' : `Add ${selectedMembers.length} Member${selectedMembers.length !== 1 ? 's' : ''}`}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -206,6 +246,9 @@ const styles = StyleSheet.create({
     height: wp('12%'),
     borderRadius: wp('6%'),
     marginRight: wp('4%'),
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   memberInfo: {
     flex: 1,
@@ -234,5 +277,29 @@ const styles = StyleSheet.create({
     fontSize: wp('4.5%'),
     fontWeight: '600',
     color: '#ffffff',
+  },
+  loadingText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: hp('2%'),
+  },
+  noResultsText: {
+    fontSize: wp('4%'),
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: hp('2%'),
+  },
+  searchHintText: {
+    fontSize: wp('4%'),
+    color: '#9ca3af',
+    textAlign: 'center',
+    paddingVertical: hp('4%'),
+    lineHeight: wp('6%'),
+  },
+  avatarText: {
+    fontSize: wp('5%'),
+    fontWeight: '600',
+    color: '#6b7280',
   },
 });

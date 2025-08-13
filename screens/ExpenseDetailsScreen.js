@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
-  Image,
+  Alert,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -16,18 +16,22 @@ import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
+import { deleteExpense } from '../services/expenseService';
+import { auth } from '../firebaseConfig';
 
 export default function ExpenseDetailsScreen({ navigation, route }) {
   // Get expense data from route params
   const expense = route?.params?.expense;
-  
+  const group = route?.params?.group;
+  const currentUser = auth.currentUser;
+
   if (!expense) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Expense not found</Text>
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.backButtonText}>Go Back</Text>
@@ -39,7 +43,7 @@ export default function ExpenseDetailsScreen({ navigation, route }) {
 
   const formatDate = (date) => {
     if (!date) return '';
-    
+
     const dateObj = date.toDate ? date.toDate() : new Date(date);
     return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -85,9 +89,45 @@ export default function ExpenseDetailsScreen({ navigation, route }) {
     });
   };
 
-  const handleSettleUp = () => {
-    // TODO: Navigate to settle up screen
-    console.log('Settle up');
+  const handleDelete = () => {
+    // Check if current user can delete this expense
+    if (!currentUser || expense.createdBy !== currentUser.uid) {
+      Alert.alert('Error', 'You can only delete expenses you created');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Expense',
+      'Are you sure you want to delete this expense? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: confirmDelete
+        }
+      ]
+    );
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const result = await deleteExpense(expense.id);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Expense deleted successfully', [
+          { 
+            text: 'OK', 
+            onPress: () => navigation.goBack()
+          }
+        ]);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to delete expense');
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      Alert.alert('Error', 'Failed to delete expense. Please try again.');
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -97,20 +137,29 @@ export default function ExpenseDetailsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={wp('6%')} color="#1f2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Expense Details</Text>
-        <View style={styles.headerSpacer} />
+        {currentUser && expense.createdBy === currentUser.uid ? (
+          <TouchableOpacity
+            style={styles.headerActionButton}
+            onPress={handleDelete}
+          >
+            <Ionicons name="trash-outline" size={wp('5.5%')} color="#ef4444" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -118,58 +167,106 @@ export default function ExpenseDetailsScreen({ navigation, route }) {
         {/* Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Details</Text>
-          
+
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Title</Text>
               <Text style={styles.detailValue}>{expense.title}</Text>
             </View>
-            
+
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Amount</Text>
               <Text style={styles.detailValue}>{formatCurrency(expense.amount)}</Text>
             </View>
-            
+
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Category</Text>
               <Text style={styles.detailValue}>{getCategoryName(expense.category)}</Text>
             </View>
-            
+
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Date</Text>
               <Text style={styles.detailValue}>{formatDate(expense.date)}</Text>
             </View>
-            
+
             {expense.description && (
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Description</Text>
                 <Text style={styles.detailValue}>{expense.description}</Text>
               </View>
             )}
+
+            {expense.groupId && expense.paidBy && (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Paid by</Text>
+                <Text style={styles.detailValue}>
+                  {group?.memberDetails?.[expense.paidBy]?.name || 'Unknown'}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Personal Expense Note */}
+        {/* Group/Personal Expense Info */}
         <View style={styles.section}>
-          <View style={styles.personalExpenseNote}>
-            <Ionicons name="person-outline" size={wp('5%')} color="#6b7280" />
-            <Text style={styles.personalExpenseText}>This is a personal expense</Text>
-          </View>
+          {expense.groupId ? (
+            <>
+              {/* Group Expense Info */}
+              <Text style={styles.sectionTitle}>Split Details</Text>
+              <View style={styles.groupExpenseNote}>
+                <Ionicons name="people-outline" size={wp('5%')} color="#3b82f6" />
+                <Text style={styles.groupExpenseText}>
+                  Group expense {group?.name ? `in ${group.name}` : ''}
+                </Text>
+              </View>
+              
+              {/* Show split details if available */}
+              {expense.splitDetails && (
+                <View style={styles.splitDetailsContainer}>
+                  {Object.entries(expense.splitDetails).map(([userId, splitInfo]) => {
+                    const memberName = group?.memberDetails?.[userId]?.name || 'Unknown';
+                    const isPayer = expense.paidBy === userId;
+                    
+                    return (
+                      <View key={userId} style={styles.splitItem}>
+                        <Text style={styles.splitMemberName}>
+                          {memberName} {isPayer && '(paid)'}
+                        </Text>
+                        <Text style={styles.splitAmount}>
+                          ${splitInfo.amount?.toFixed(2) || '0.00'}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.personalExpenseNote}>
+              <Ionicons name="person-outline" size={wp('5%')} color="#6b7280" />
+              <Text style={styles.personalExpenseText}>This is a personal expense</Text>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-            <Text style={styles.editButtonText}>Edit Expense</Text>
-          </TouchableOpacity>
-        </View>
+        {currentUser && expense.createdBy === currentUser.uid && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+              <Text style={styles.editButtonText}>Edit Expense</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <Text style={styles.deleteButtonText}>Delete Expense</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Add some bottom padding for the floating button */}
         <View style={styles.bottomPadding} />
       </ScrollView>
 
       {/* Floating Add Expense Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.floatingButton}
         onPress={() => navigation.navigate('AddExpense')}
       >
@@ -205,6 +302,9 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: wp('8%'),
+  },
+  headerActionButton: {
+    padding: wp('2%'),
   },
   content: {
     flex: 1,
@@ -322,8 +422,53 @@ const styles = StyleSheet.create({
     marginLeft: wp('2%'),
     fontWeight: '500',
   },
+  groupExpenseNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9ff',
+    padding: wp('4%'),
+    borderRadius: wp('3%'),
+    borderLeftWidth: 4,
+    borderLeftColor: '#3b82f6',
+    marginBottom: hp('2%'),
+  },
+  groupExpenseText: {
+    fontSize: wp('4%'),
+    color: '#3b82f6',
+    marginLeft: wp('2%'),
+    fontWeight: '500',
+  },
+  splitDetailsContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('4%'),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  splitItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: hp('1%'),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  splitMemberName: {
+    fontSize: wp('4%'),
+    color: '#1f2937',
+    fontWeight: '500',
+  },
+  splitAmount: {
+    fontSize: wp('4%'),
+    color: '#1f2937',
+    fontWeight: '600',
+  },
   actionButtons: {
     marginTop: hp('2%'),
+    gap: hp('1.5%'),
   },
   editButton: {
     backgroundColor: '#3b82f6',
@@ -333,6 +478,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   editButtonText: {
+    fontSize: wp('4.5%'),
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  deleteButton: {
+    backgroundColor: '#ef4444',
+    borderRadius: wp('6%'),
+    paddingVertical: hp('2%'),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
     fontSize: wp('4.5%'),
     fontWeight: '600',
     color: '#ffffff',

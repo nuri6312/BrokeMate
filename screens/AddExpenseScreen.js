@@ -22,6 +22,8 @@ import {
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
 import { addPersonalExpense } from '../services/databaseService';
+import { addGroupExpense } from '../services/expenseService';
+import { SPLIT_TYPES } from '../models/dataModels';
 
 const categories = [
   { id: 'housing', name: 'Housing & Utilities', icon: 'home-outline', color: '#10b981' },
@@ -39,9 +41,12 @@ const categories = [
 ];
 
 export default function AddExpenseScreen({ navigation, onClose, user, route }) {
-  // Check if we're in editing mode
+  // Check if we're in editing mode or group mode
   const isEditing = route?.params?.isEditing || false;
   const existingData = route?.params?.expenseData || {};
+  const groupId = route?.params?.groupId;
+  const group = route?.params?.group;
+  const isGroupExpense = !!groupId;
 
   const [title, setTitle] = useState(existingData.title || '');
   const [amount, setAmount] = useState(existingData.amount || '');
@@ -50,6 +55,10 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
   const [selectedDate, setSelectedDate] = useState(existingData.date || new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedPayer, setSelectedPayer] = useState(user?.uid || '');
+  const [selectedParticipants, setSelectedParticipants] = useState(
+    group?.members || [user?.uid || '']
+  );
 
   const handleDateChange = (event, date) => {
     if (Platform.OS === 'android') {
@@ -86,13 +95,26 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
       return;
     }
 
+    if (isGroupExpense && (!selectedPayer || selectedParticipants.length === 0)) {
+      Alert.alert('Error', 'Please select who paid and participants');
+      return;
+    }
+
     const expenseData = {
       title: title.trim(),
-      amount: amount,
+      amount: parseFloat(amount),
       description: description.trim(),
-      category: selectedCategory,
+      category: selectedCategory.id,
       date: selectedDate,
     };
+
+    if (isGroupExpense) {
+      // Add group-specific data
+      expenseData.groupId = groupId;
+      expenseData.paidBy = selectedPayer;
+      expenseData.participants = selectedParticipants;
+      expenseData.splitType = SPLIT_TYPES.EQUAL; // Default to equal split for now
+    }
 
     if (isEditing) {
       // TODO: Implement update expense logic
@@ -100,20 +122,23 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
       Alert.alert('Success', 'Expense updated successfully');
     } else {
       try {
-        // Get user from route params or props
-        const userId = user?.uid || route?.params?.userId;
-        console.log('User ID:', userId);
-        console.log('User object:', user);
-        console.log('Route params:', route?.params);
-
-        if (!userId) {
-          Alert.alert('Error', 'User not found. Please try again.');
-          return;
+        let result;
+        
+        if (isGroupExpense) {
+          console.log('Adding group expense:', expenseData);
+          result = await addGroupExpense(expenseData);
+        } else {
+          // Personal expense
+          const userId = user?.uid || route?.params?.userId;
+          if (!userId) {
+            Alert.alert('Error', 'User not found. Please try again.');
+            return;
+          }
+          console.log('Adding personal expense:', expenseData, userId);
+          result = await addPersonalExpense(expenseData, userId);
         }
 
-        console.log('Calling addPersonalExpense with:', expenseData, userId);
-        const result = await addPersonalExpense(expenseData, userId);
-        console.log('Result from addPersonalExpense:', result);
+        console.log('Result:', result);
 
         if (result.success) {
           Alert.alert('Success', 'Expense saved successfully');
@@ -154,7 +179,7 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
           <Ionicons name="close" size={wp('6%')} color="#1f2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {isEditing ? 'Edit Expense' : 'Add Expense'}
+          {isEditing ? 'Edit Expense' : isGroupExpense ? `Add to ${group?.name}` : 'Add Expense'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -237,6 +262,61 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
             <Ionicons name="calendar-outline" size={wp('5%')} color="#9ca3af" />
           </TouchableOpacity>
         </View>
+
+        {/* Group Expense Options */}
+        {isGroupExpense && (
+          <>
+            {/* Who Paid */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.sectionLabel}>Who paid?</Text>
+              <View style={styles.participantsList}>
+                {Object.entries(group?.memberDetails || {}).map(([memberId, memberInfo]) => (
+                  <TouchableOpacity
+                    key={memberId}
+                    style={[
+                      styles.participantItem,
+                      selectedPayer === memberId && styles.participantItemSelected
+                    ]}
+                    onPress={() => setSelectedPayer(memberId)}
+                  >
+                    <Text style={styles.participantName}>{memberInfo.name}</Text>
+                    {selectedPayer === memberId && (
+                      <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Participants */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.sectionLabel}>Split between</Text>
+              <View style={styles.participantsList}>
+                {Object.entries(group?.memberDetails || {}).map(([memberId, memberInfo]) => (
+                  <TouchableOpacity
+                    key={memberId}
+                    style={[
+                      styles.participantItem,
+                      selectedParticipants.includes(memberId) && styles.participantItemSelected
+                    ]}
+                    onPress={() => {
+                      if (selectedParticipants.includes(memberId)) {
+                        setSelectedParticipants(selectedParticipants.filter(id => id !== memberId));
+                      } else {
+                        setSelectedParticipants([...selectedParticipants, memberId]);
+                      }
+                    }}
+                  >
+                    <Text style={styles.participantName}>{memberInfo.name}</Text>
+                    {selectedParticipants.includes(memberId) && (
+                      <Ionicons name="checkmark-circle" size={wp('5%')} color="#10b981" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Save Button */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveExpense}>
@@ -556,5 +636,33 @@ const styles = StyleSheet.create({
   },
   datePicker: {
     height: hp('25%'),
+  },
+  // Group expense styles
+  sectionLabel: {
+    fontSize: wp('4%'),
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: hp('1%'),
+  },
+  participantsList: {
+    backgroundColor: '#ffffff',
+    borderRadius: wp('3%'),
+    padding: wp('2%'),
+  },
+  participantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('3%'),
+    paddingVertical: hp('1.5%'),
+    borderRadius: wp('2%'),
+    marginBottom: hp('0.5%'),
+  },
+  participantItemSelected: {
+    backgroundColor: '#f0f9ff',
+  },
+  participantName: {
+    fontSize: wp('4%'),
+    color: '#1f2937',
   },
 });

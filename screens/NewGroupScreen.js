@@ -8,15 +8,18 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { Ionicons } from '@expo/vector-icons';
+import { createGroup } from '../services/groupService';
 
 export default function NewGroupScreen({ navigation }) {
   const [groupName, setGroupName] = useState('');
   const [memberEmail, setMemberEmail] = useState('');
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleInviteMember = () => {
     if (memberEmail.trim()) {
@@ -25,10 +28,33 @@ export default function NewGroupScreen({ navigation }) {
     }
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (groupName.trim()) {
-      // Handle group creation logic here
-      navigation.goBack();
+      try {
+        setLoading(true);
+        
+        const groupData = {
+          name: groupName.trim(),
+          description: '',
+          imageURL: '',
+          currency: 'USD'
+        };
+
+        const result = await createGroup(groupData);
+        
+        if (result.success) {
+          Alert.alert('Success', 'Group created successfully!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        } else {
+          Alert.alert('Error', result.error);
+        }
+      } catch (error) {
+        console.error('Error creating group:', error);
+        Alert.alert('Error', 'Failed to create group');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -95,11 +121,13 @@ export default function NewGroupScreen({ navigation }) {
         </View>
 
         <TouchableOpacity 
-          style={[styles.createButton, !groupName.trim() && styles.createButtonDisabled]}
+          style={[styles.createButton, (!groupName.trim() || loading) && styles.createButtonDisabled]}
           onPress={handleCreateGroup}
-          disabled={!groupName.trim()}
+          disabled={!groupName.trim() || loading}
         >
-          <Text style={styles.createButtonText}>Create Group</Text>
+          <Text style={styles.createButtonText}>
+            {loading ? 'Creating...' : 'Create Group'}
+          </Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
