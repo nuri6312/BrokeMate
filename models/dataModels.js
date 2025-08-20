@@ -115,6 +115,23 @@ export const ActivityModel = {
     createdAt: null,
 };
 
+// Budget Model
+export const BudgetModel = {
+    id: '',
+    userId: '', // User ID who owns the budget
+    amount: 0, // Budget amount
+    spent: 0, // Amount spent so far
+    remaining: 0, // Remaining amount (calculated)
+    category: 'general', // Budget category
+    month: 0, // Month (1-12)
+    year: 0, // Year
+    monthName: '', // Month name for display
+    currency: 'USD',
+    isActive: true,
+    createdAt: null,
+    updatedAt: null,
+};
+
 // Validation Functions
 export const validateUser = (userData) => {
     const errors = [];
@@ -200,6 +217,35 @@ export const validatePayment = (paymentData) => {
 
     if (!paymentData.amount || paymentData.amount <= 0) {
         errors.push('Payment amount must be greater than 0');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors
+    };
+};
+
+export const validateBudget = (budgetData) => {
+    const errors = [];
+
+    if (!budgetData.userId) {
+        errors.push('User ID is required');
+    }
+
+    if (!budgetData.amount || budgetData.amount <= 0) {
+        errors.push('Budget amount must be greater than 0');
+    }
+
+    if (!budgetData.month || budgetData.month < 1 || budgetData.month > 12) {
+        errors.push('Valid month is required (1-12)');
+    }
+
+    if (!budgetData.year || budgetData.year < 2020) {
+        errors.push('Valid year is required');
+    }
+
+    if (!budgetData.category) {
+        errors.push('Budget category is required');
     }
 
     return {

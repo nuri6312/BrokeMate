@@ -21,6 +21,8 @@ import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SettleBalancesScreen from '../screens/SettleBalancesScreen';
+import CreateBudgetScreen from '../screens/CreateBudgetScreen';
+import UpdateBudgetScreen from '../screens/UpdateBudgetScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -209,6 +211,22 @@ export default function MainTabNavigator({ user }) {
             name="SettleBalances"
             component={SettleBalancesScreen}
             options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="CreateBudget"
+            component={CreateBudgetScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="UpdateBudget"
+            component={UpdateBudgetScreen}
+            options={{
+              presentation: 'modal',
               headerShown: false,
             }}
           />

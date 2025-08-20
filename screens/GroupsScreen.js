@@ -24,7 +24,7 @@ export default function GroupsScreen({ user, navigation }) {
     const balance = group.userBalance || 0;
     const isOwed = balance > 0;
     const owes = balance < 0;
-    
+
     return (
       <TouchableOpacity
         key={group.id}
@@ -46,11 +46,11 @@ export default function GroupsScreen({ user, navigation }) {
             )}
           </View>
           <View style={styles.groupImageContainer}>
-            <Image 
-              source={{ 
+            <Image
+              source={{
                 uri: group.imageURL || 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400&h=300&fit=crop'
-              }} 
-              style={styles.groupImage} 
+              }}
+              style={styles.groupImage}
             />
           </View>
         </View>
@@ -61,17 +61,17 @@ export default function GroupsScreen({ user, navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
+
       <View style={styles.header}>
         <Text style={styles.title}>Groups</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate('NewGroup')}
         >
           <Ionicons name="add" size={wp('6%')} color="#1f2937" />
         </TouchableOpacity>
       </View>
-      
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading groups...</Text>
@@ -82,7 +82,7 @@ export default function GroupsScreen({ user, navigation }) {
           <Text style={styles.emptySubtext}>Create your first group to get started!</Text>
         </View>
       ) : (
-        <ScrollView 
+        <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
