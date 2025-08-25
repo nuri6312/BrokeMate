@@ -268,6 +268,40 @@ export const checkBudgetStatus = async (userId) => {
   }
 };
 
+// ============ EXPENSE TRACKING ============
+
+export const addExpenseToBudget = async (userId, expenseAmount) => {
+  try {
+    const currentBudgetResult = await getCurrentMonthBudget(userId);
+    
+    if (currentBudgetResult.success && currentBudgetResult.data) {
+      const budget = currentBudgetResult.data;
+      const newSpentAmount = (budget.spent || 0) + expenseAmount;
+      
+      // Update budget spending
+      const updateResult = await updateBudgetSpending(budget.id, newSpentAmount);
+      
+      if (updateResult.success) {
+        const percentageUsed = (newSpentAmount / budget.amount) * 100;
+        
+        return {
+          success: true,
+          data: {
+            ...updateResult.data,
+            percentageUsed,
+            shouldNotify: updateResult.data.isOverBudget || percentageUsed >= 90
+          }
+        };
+      }
+    }
+    
+    return { success: true, data: null }; // No active budget
+  } catch (error) {
+    console.error('Error adding expense to budget:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // ============ REAL-TIME LISTENERS ============
 
 export const listenToUserBudgets = (userId, callback) => {

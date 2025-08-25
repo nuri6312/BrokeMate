@@ -25,8 +25,13 @@ import {
 } from '../services/notificationService';
 import { 
   getDemoBudget, 
-  createDemoBudgetData 
+  createEmptyBudgetData 
 } from '../services/budgetDemoService';
+import { 
+  getNotificationSettings, 
+  toggleNotifications, 
+  shouldSendNotification 
+} from '../services/notificationSettingsService';
 
 export default function ActivityScreen({ navigation, user }) {
   const [currentBudget, setCurrentBudget] = useState(null);
@@ -34,6 +39,7 @@ export default function ActivityScreen({ navigation, user }) {
   const [budgetStatus, setBudgetStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
@@ -46,6 +52,7 @@ export default function ActivityScreen({ navigation, user }) {
   useEffect(() => {
     initializeNotifications();
     loadBudgetData();
+    loadNotificationSettings();
     
     // Set up real-time listener for budgets with error handling
     let unsubscribe;
@@ -83,13 +90,13 @@ export default function ActivityScreen({ navigation, user }) {
       // Try to get current month budget from Firebase
       let budgetResult = await getCurrentMonthBudget(user.uid);
       
-      // If Firebase fails, use demo data
+      // If Firebase fails, check demo data
       if (!budgetResult.success || !budgetResult.data) {
-        console.log('Firebase budget failed, using demo data');
+        console.log('Firebase budget failed, checking demo data');
         budgetResult = await getDemoBudget(user.uid);
       }
       
-      if (budgetResult.success && budgetResult.data) {
+      if (budgetResult.success && budgetResult.data && budgetResult.data.amount > 0) {
         setCurrentBudget(budgetResult.data);
         setMonthlySpending(budgetResult.data.spent || 0);
         
@@ -106,34 +113,31 @@ export default function ActivityScreen({ navigation, user }) {
           shouldNotify: isOverBudget || percentageUsed >= 90
         });
         
-        // Send notifications if needed
+        // Send notifications if needed and enabled
         try {
-          if (isOverBudget) {
-            await sendBudgetOverAlert(budget);
-          } else if (percentageUsed >= 90) {
-            await sendBudgetWarningAlert(budget);
+          const shouldSend = await shouldSendNotification(user.uid, 'budgetAlerts');
+          if (shouldSend) {
+            if (isOverBudget) {
+              await sendBudgetOverAlert(budget);
+            } else if (percentageUsed >= 90) {
+              await sendBudgetWarningAlert(budget);
+            }
           }
         } catch (notificationError) {
           console.log('Notification error (non-critical):', notificationError.message);
         }
       } else {
-        console.log('No budget data available');
+        console.log('No active budget found - user needs to create one');
         setCurrentBudget(null);
         setMonthlySpending(0);
         setBudgetStatus({ hasActiveBudget: false });
       }
     } catch (error) {
       console.error('Error loading budget data:', error);
-      // Use demo data as fallback
-      try {
-        const demoResult = await getDemoBudget(user.uid);
-        if (demoResult.success) {
-          setCurrentBudget(demoResult.data);
-          setMonthlySpending(demoResult.data.spent || 0);
-        }
-      } catch (demoError) {
-        console.log('Demo data also failed:', demoError.message);
-      }
+      // Set empty state for new users
+      setCurrentBudget(null);
+      setMonthlySpending(0);
+      setBudgetStatus({ hasActiveBudget: false });
     } finally {
       setLoading(false);
     }
@@ -155,6 +159,50 @@ export default function ActivityScreen({ navigation, user }) {
     } else {
       handleCreateBudget();
     }
+  };
+
+  const loadNotificationSettings = async () => {
+    try {
+      const result = await getNotificationSettings(user.uid);
+      if (result.success) {
+        setNotificationsEnabled(result.data.enabled);
+      }
+    } catch (error) {
+      console.log('Error loading notification settings:', error);
+    }
+  };
+
+  const handleNotificationSettings = async () => {
+    Alert.alert(
+      'Notification Settings',
+      `Budget notifications are currently ${notificationsEnabled ? 'enabled' : 'disabled'}. Would you like to ${notificationsEnabled ? 'disable' : 'enable'} them?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: notificationsEnabled ? 'Disable' : 'Enable',
+          onPress: async () => {
+            try {
+              const result = await toggleNotifications(user.uid);
+              if (result.success) {
+                setNotificationsEnabled(result.data.enabled);
+                Alert.alert(
+                  'Settings Updated',
+                  `Budget notifications have been ${result.data.enabled ? 'enabled' : 'disabled'}.`
+                );
+              } else {
+                Alert.alert('Error', 'Failed to update notification settings');
+              }
+            } catch (error) {
+              console.log('Error updating notification settings:', error);
+              Alert.alert('Error', 'Failed to update notification settings');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const getBudgetProgress = () => {
@@ -284,26 +332,18 @@ export default function ActivityScreen({ navigation, user }) {
 
             <TouchableOpacity 
               style={styles.actionCard}
-              onPress={() => navigation.navigate('AddExpense', { user })}
+              onPress={handleNotificationSettings}
             >
-              <View style={[styles.actionIcon, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="receipt-outline" size={24} color="#f59e0b" />
-              </View>
-              <Text style={styles.actionText}>Add Expense</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, { backgroundColor: '#d1fae5' }]}>
-                <Ionicons name="analytics-outline" size={24} color="#10b981" />
-              </View>
-              <Text style={styles.actionText}>View Reports</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionCard}>
               <View style={[styles.actionIcon, { backgroundColor: '#e0e7ff' }]}>
-                <Ionicons name="notifications-outline" size={24} color="#6366f1" />
+                <Ionicons 
+                  name={notificationsEnabled ? "notifications" : "notifications-off"} 
+                  size={24} 
+                  color="#6366f1" 
+                />
               </View>
-              <Text style={styles.actionText}>Notifications</Text>
+              <Text style={styles.actionText}>
+                {notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

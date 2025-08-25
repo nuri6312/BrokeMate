@@ -21,7 +21,6 @@ import { updateDemoBudgetSpending } from '../services/budgetDemoService';
 export default function UpdateBudgetScreen({ navigation, route }) {
   const { user, currentBudget } = route.params;
   const [amount, setAmount] = useState(currentBudget?.amount?.toString() || '');
-  const [category, setCategory] = useState(currentBudget?.category || 'general');
   const [loading, setLoading] = useState(false);
   const [budgetData, setBudgetData] = useState(currentBudget);
 
@@ -33,14 +32,7 @@ export default function UpdateBudgetScreen({ navigation, route }) {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const categories = [
-    { id: 'general', name: 'General', icon: 'wallet-outline', color: '#3b82f6' },
-    { id: 'food', name: 'Food & Dining', icon: 'restaurant-outline', color: '#ef4444' },
-    { id: 'transport', name: 'Transportation', icon: 'car-outline', color: '#f59e0b' },
-    { id: 'entertainment', name: 'Entertainment', icon: 'game-controller-outline', color: '#8b5cf6' },
-    { id: 'shopping', name: 'Shopping', icon: 'bag-outline', color: '#ec4899' },
-    { id: 'utilities', name: 'Utilities', icon: 'flash-outline', color: '#10b981' },
-  ];
+
 
   useEffect(() => {
     // Load fresh budget data when screen opens
@@ -53,7 +45,6 @@ export default function UpdateBudgetScreen({ navigation, route }) {
       if (result.success && result.data) {
         setBudgetData(result.data);
         setAmount(result.data.amount.toString());
-        setCategory(result.data.category);
       }
     } catch (error) {
       console.log('Error loading current budget:', error);
@@ -67,7 +58,7 @@ export default function UpdateBudgetScreen({ navigation, route }) {
     }
 
     const newAmount = parseFloat(amount);
-    if (newAmount === budgetData?.amount && category === budgetData?.category) {
+    if (newAmount === budgetData?.amount) {
       Alert.alert('No Changes', 'No changes were made to the budget');
       return;
     }
@@ -77,7 +68,7 @@ export default function UpdateBudgetScreen({ navigation, route }) {
     try {
       const updateData = {
         amount: newAmount,
-        category: category,
+        category: 'general', // Always use general for monthly budget
         remaining: newAmount - (budgetData?.spent || 0), // Recalculate remaining
         monthName: monthNames[currentMonth - 1]
       };
@@ -136,7 +127,7 @@ export default function UpdateBudgetScreen({ navigation, route }) {
     return '#10b981';
   };
 
-  const selectedCategory = categories.find(cat => cat.id === category);
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -241,39 +232,14 @@ export default function UpdateBudgetScreen({ navigation, route }) {
             )}
           </View>
 
-          {/* Category Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[
-                    styles.categoryCard,
-                    category === cat.id && { ...styles.selectedCategory, borderColor: cat.color }
-                  ]}
-                  onPress={() => setCategory(cat.id)}
-                >
-                  <View style={[styles.categoryIcon, { backgroundColor: cat.color + '20' }]}>
-                    <Ionicons name={cat.icon} size={24} color={cat.color} />
-                  </View>
-                  <Text style={[
-                    styles.categoryName,
-                    category === cat.id && { color: cat.color, fontWeight: '600' }
-                  ]}>
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+
 
           {/* Update Info */}
           <View style={styles.infoCard}>
             <Ionicons name="information-circle-outline" size={20} color="#3b82f6" />
             <Text style={styles.infoText}>
-              Updating your budget will recalculate your remaining amount based on current spending. 
-              Your spending history will remain unchanged.
+              Updating your monthly budget will recalculate your remaining amount based on current spending. 
+              This budget applies to all your expenses for the month.
             </Text>
           </View>
         </ScrollView>
@@ -451,42 +417,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: wp('1%'),
   },
-  categoriesScroll: {
-    marginHorizontal: -wp('6%'),
-    paddingHorizontal: wp('6%'),
-  },
-  categoryCard: {
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: wp('4%'),
-    marginRight: wp('3%'),
-    minWidth: wp('20%'),
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  selectedCategory: {
-    borderWidth: 2,
-  },
-  categoryIcon: {
-    width: wp('12%'),
-    height: wp('12%'),
-    borderRadius: wp('6%'),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: hp('1%'),
-  },
-  categoryName: {
-    fontSize: wp('3.5%'),
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: wp('4%'),
-  },
+
   infoCard: {
     flexDirection: 'row',
     backgroundColor: '#eff6ff',

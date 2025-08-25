@@ -25,6 +25,10 @@ import { addPersonalExpense } from '../services/databaseService';
 import { addGroupExpense } from '../services/expenseService';
 import { getUserGroups } from '../services/groupService';
 import { SPLIT_TYPES } from '../models/dataModels';
+import { addExpenseToBudget } from '../services/budgetService';
+import { addExpenseToDemo } from '../services/budgetDemoService';
+import { sendBudgetOverAlert, sendBudgetWarningAlert } from '../services/notificationService';
+import { shouldSendNotification } from '../services/notificationSettingsService';
 
 const categories = [
   { id: 'housing', name: 'Housing & Utilities', icon: 'home-outline', color: '#10b981' },
@@ -183,6 +187,48 @@ export default function AddExpenseScreen({ navigation, onClose, user, route }) {
         console.log('Result:', result);
 
         if (result.success) {
+          // Update budget if this is a personal expense
+          if (!isCurrentlyGroupExpense) {
+            try {
+              const userId = user?.uid || route?.params?.userId;
+              const expenseAmount = parseFloat(amount);
+              
+              // Try Firebase budget first
+              let budgetResult = await addExpenseToBudget(userId, expenseAmount);
+              
+              // If Firebase fails, try demo budget
+              if (!budgetResult.success) {
+                budgetResult = await addExpenseToDemo(userId, expenseAmount);
+              }
+              
+              // Send notifications if budget limits are reached and notifications are enabled
+              if (budgetResult.success && budgetResult.data) {
+                const { isOverBudget, percentageUsed, shouldNotify } = budgetResult.data;
+                
+                // Check if notifications are enabled for this user
+                const shouldSendNotifications = await shouldSendNotification(userId, 'budgetAlerts');
+                
+                if (shouldNotify && shouldSendNotifications) {
+                  if (isOverBudget) {
+                    await sendBudgetOverAlert({
+                      remaining: budgetResult.data.remaining,
+                      spent: budgetResult.data.spent,
+                      amount: budgetResult.data.spent - budgetResult.data.remaining
+                    });
+                  } else if (percentageUsed >= 90) {
+                    await sendBudgetWarningAlert({
+                      spent: budgetResult.data.spent,
+                      remaining: budgetResult.data.remaining,
+                      amount: budgetResult.data.spent + budgetResult.data.remaining
+                    });
+                  }
+                }
+              }
+            } catch (budgetError) {
+              console.log('Budget update failed (non-critical):', budgetError.message);
+            }
+          }
+          
           Alert.alert('Success', 'Expense saved successfully');
         } else {
           Alert.alert('Error', result.error || 'Failed to save expense');
